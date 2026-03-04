@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Base Precios">
+<meta name="theme-color" content="#1E293B">
+<title>Base de Precios</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#F8FAFC;color:#1E293B;min-height:100vh;}
+input,select,textarea,button{font-family:inherit;font-size:14px;outline:none;-webkit-appearance:none;}
+button{cursor:pointer;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;color:white;z-index:999;animation:fadeUp .2s ease;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;}
+.modal{background:white;border-radius:16px;padding:26px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.header{background:linear-gradient(135deg,#1E293B,#334155);padding:16px 16px 0;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.tabs{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tab{background:none;border:none;padding:9px 14px;font-size:12px;font-weight:600;white-space:nowrap;color:#94A3B8;border-bottom:2px solid transparent;transition:all .2s;}
+.tab.active{color:#60A5FA;border-bottom-color:#60A5FA;}
+.content{max-width:860px;margin:0 auto;padding:20px 14px;}
+.card{background:white;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+.inp{width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid #E2E8F0;font-size:13px;background:#F8FAFC;color:#1E293B;}
+.inp:focus{border-color:#3B82F6;}
+.btn-primary{background:#3B82F6;color:white;border:none;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:700;}
+.btn-secondary{background:#F1F5F9;color:#64748B;border:none;padding:11px 18px;border-radius:10px;font-size:14px;}
+.btn-green{background:#10B981;color:white;border:none;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:700;}
+.btn-red{background:#EF4444;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;}
+.fl{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.span2{grid-column:1/-1;}
+.item-card{background:white;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden;}
+.disc-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.age-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;}
+.checkbox{width:22px;height:22px;border-radius:6px;border:2px solid #CBD5E1;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.checkbox.checked{background:#3B82F6;border-color:#3B82F6;}
+.empty{text-align:center;padding:52px 24px;color:#94A3B8;}
+.scan-drop{border:2px dashed #CBD5E1;border-radius:14px;padding:44px 24px;text-align:center;cursor:pointer;background:#F8FAFC;transition:all .2s;}
+.scan-drop:active{border-color:#3B82F6;background:#EFF6FF;}
+.sticky-bar{position:sticky;bottom:16px;background:white;border-radius:14px;padding:13px 18px;box-shadow:0 4px 24px rgba(0,0,0,.13);display:flex;align-items:center;gap:12px;margin-top:8px;}
+.cot-tab{flex:1;padding:9px 4px;border-radius:9px;border:none;font-size:12px;font-weight:700;transition:all .2s;background:transparent;color:#94A3B8;}
+.cot-tab.active{background:#1E293B;color:white;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{padding:9px 10px;font-weight:700;color:#475569;border-bottom:1px solid #E2E8F0;white-space:nowrap;text-align:right;background:#F8FAFC;}
+th:first-child{text-align:left;}
+td{padding:9px 10px;text-align:right;border-bottom:1px solid #F1F5F9;}
+td:first-child{text-align:left;font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+tr:nth-child(even) td{background:#FAFBFC;}
+tfoot td{font-weight:700;background:#F1F5F9 !important;border-top:2px solid #E2E8F0;}
+.age-chip{padding:4px 10px;border-radius:16px;border:none;font-size:11px;font-weight:600;cursor:pointer;}
+.filter-bar{background:white;border-radius:12px;padding:11px 14px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+.spin{display:inline-block;animation:spin 1.5s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.loc-tag{font-size:11px;color:#06B6D4;font-weight:600;}
+.date-tag{font-size:10px;color:#CBD5E1;}
+.upd-tag{font-size:10px;color:#86EFAC;}
+select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const API_KEY = "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";
+const STORAGE_KEY = "precios_v5";
+
+const DISC = [
+{id:“tornilleria”,label:“Tornillería / Ferretería”,color:”#F59E0B”,bg:”#FEF3C7”,icon:“🔩”},
+{id:“electricidad”,label:“Electricidad”,color:”#3B82F6”,bg:”#DBEAFE”,icon:“⚡”},
+{id:“plomeria”,label:“Plomería / Hidráulica”,color:”#06B6D4”,bg:”#CFFAFE”,icon:“🔧”},
+{id:“estructura”,label:“Estructura / Acero”,color:”#64748B”,bg:”#F1F5F9”,icon:“🏗️”},
+{id:“civil”,label:“Civil”,color:”#92400E”,bg:”#FEF3C7”,icon:“🧱”},
+{id:“tuberias”,label:“Tuberías”,color:”#10B981”,bg:”#D1FAE5”,icon:“🔄”},
+{id:“herreria”,label:“Herrería”,color:”#7C3AED”,bg:”#EDE9FE”,icon:“⚒️”},
+{id:“consumibles”,label:“Consumibles”,color:”#EC4899”,bg:”#FCE7F3”,icon:“📦”},
+];
+const ESTADOS = [“Aguascalientes”,“Baja California”,“Baja California Sur”,“Campeche”,“Chiapas”,“Chihuahua”,“Ciudad de México”,“Coahuila”,“Colima”,“Durango”,“Guanajuato”,“Guerrero”,“Hidalgo”,“Jalisco”,“México”,“Michoacán”,“Morelos”,“Nayarit”,“Nuevo León”,“Oaxaca”,“Puebla”,“Querétaro”,“Quintana Roo”,“San Luis Potosí”,“Sinaloa”,“Sonora”,“Tabasco”,“Tamaulipas”,“Tlaxcala”,“Veracruz”,“Yucatán”,“Zacatecas”];
+const UNIDADES = [“pza”,“ml”,“m”,“m²”,“m³”,“kg”,“ton”,“lt”,“rollo”,“caja”,“par”,“juego”,“tramo”,“varilla”,“bulto”];
+
+const genId = () => Date.now()+”-”+Math.random().toString(36).slice(2,7);
+const today = () => new Date().toISOString().slice(0,10);
+const fmt   = v => Number(v).toLocaleString(“es-MX”,{style:“currency”,currency:“MXN”,minimumFractionDigits:2});
+const getDisc = id => DISC.find(d=>d.id===id);
+
+function getAge(subida, act) {
+const ref = act || subida;
+if (!ref) return {color:”#94A3B8”,bg:”#F1F5F9”,label:“Sin fecha”,icon:“⚪”,months:null};
+const m = Math.floor((Date.now()-new Date(ref))/(1000*60*60*24*30.44));
+if (m<6)  return {color:”#059669”,bg:”#D1FAE5”,label:m+“m”,icon:“🟢”,months:m};
+if (m<12) return {color:”#D97706”,bg:”#FEF3C7”,label:m+“m”,icon:“🟡”,months:m};
+if (m<18) return {color:”#EA580C”,bg:”#FFEDD5”,label:m+“m ⚠️”,icon:“🟠”,months:m};
+return {color:”#DC2626”,bg:”#FEE2E2”,label:m+“m — Actualizar”,icon:“🔴”,months:m};
+}
+
+function loadItems() { try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||”[]”);}catch{return[];} }
+function saveItems(arr) { try{localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));}catch{} }
+
+// ── State ──
+let S = {
+items: loadItems(),
+view: “catalogo”,
+search: “”, filterDisc: “all”, filterAge: “all”, sortBy: “nombre”,
+toast: null, toastTimer: null,
+confirmDel: null,
+editItem: null,
+form: emptyForm(),
+// scan
+scanStep: “idle”, scanPreview: null, scanResults: [], scanSel: {}, scanEdits: {}, scanErr: “”, scanLoc: {estado:””,ciudad:””},
+// cotizacion
+cotView: “select”, cotItems: [], cotGroups: [{id:“g1”,nombre:“Grupo 1”,pct:“30”}],
+globalPct: “30”, pctMode: “global”, cotNombre: “”, cotCliente: “”,
+cotSearch: “”, cotFilterDisc: “all”,
+// quick edit
+quickEditId: null, quickEditVal: “”,
+};
+
+function emptyForm() {
+return {nombre:””,disciplina:””,subpartida:””,unidad:“pza”,precio:””,proveedor:””,fecha:today(),notas:””,estado:””,ciudad:””};
+}
+
+function setState(patch) { Object.assign(S,patch); render(); }
+function persist(items) { S.items=items; saveItems(items); render(); }
+
+function showToast(msg,type=“ok”) {
+if (S.toastTimer) clearTimeout(S.toastTimer);
+const bg = type===“err”?”#EF4444”:type===“info”?”#64748B”:”#10B981”;
+S.toast={msg,bg}; S.toastTimer=setTimeout(()=>{S.toast=null;render();},3200); render();
+}
+
+// ── API call ──
+async function extractFromFile(b64, mediaType) {
+const disc = DISC.map(d=>d.id).join(”, “);
+const prompt = `Eres un asistente especializado en construcción en México. Analiza esta cotización y extrae TODOS los materiales con sus precios unitarios. Para cada ítem devuelve JSON con: nombre, disciplina (uno de: ${disc}), subpartida, unidad, precio (número, precio UNITARIO), proveedor, fecha (YYYY-MM-DD), notas, estado, ciudad. IMPORTANTE: extrae solo filas con descripción y precio unitario. Ignora totales e IVA. Responde ÚNICAMENTE con array JSON válido. Si no hay materiales: []`;
+
+const content = mediaType.startsWith(“image/”)
+? [{type:“image”,source:{type:“base64”,media_type:mediaType,data:b64}},{type:“text”,text:prompt}]
+: [{type:“document”,source:{type:“base64”,media_type:“application/pdf”,data:b64}},{type:“text”,text:prompt}];
+
+const res = await fetch(“https://api.anthropic.com/v1/messages”,{
+method:“POST”,
+headers:{“Content-Type”:“application/json”,“x-api-key”:API_KEY,“anthropic-version”:“2023-06-01”,“anthropic-dangerous-direct-browser-access”:“true”},
+body: JSON.stringify({model:“claude-opus-4-5”,max_tokens:2048,messages:[{role:“user”,content}]})
+});
+if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||“Error “+res.status); }
+const data = await res.json();
+const raw = (data.content||[]).map(b=>b.text||””).join(””).trim();
+const match = raw.match(/[[\s\S]*]/);
+if (!match) throw new Error(“No se encontraron materiales. Intenta con imagen más clara.”);
+let parsed;
+try { parsed=JSON.parse(match[0]); } catch { parsed=JSON.parse(match[0].replace(/,(\s*[}]])/g,”$1”)); }
+return parsed.map(x=>({
+nombre:String(x.nombre||“Sin nombre”),
+disciplina:DISC.find(d=>d.id===x.disciplina)?x.disciplina:“consumibles”,
+subpartida:String(x.subpartida||””),
+unidad:String(x.unidad||“pza”),
+precio:Number(String(x.precio||“0”).replace(/[,$]/g,””))||0,
+proveedor:String(x.proveedor||””),
+fecha:String(x.fecha||today()),
+notas:String(x.notas||””),
+estado:String(x.estado||””),
+ciudad:String(x.ciudad||””),
+}));
+}
+
+// ── HTML helpers ──
+function h(tag,attrs,…children) {
+const el = document.createElement(tag);
+if (attrs) Object.entries(attrs).forEach(([k,v])=>{
+if (k===“class”) el.className=v;
+else if (k.startsWith(“on”)) el[k.toLowerCase()]=v;
+else if (k===“style”&&typeof v===“object”) Object.assign(el.style,v);
+else if (k===“checked”&&tag===“input”) el.checked=v;
+else if (v!==null&&v!==undefined&&v!==false) el.setAttribute(k,v);
+});
+children.flat(Infinity).forEach(c=>{ if(c==null||c===false) return; el.appendChild(typeof c===“string”?document.createTextNode(c):c); });
+return el;
+}
+const div  = (a,…c) => h(“div”,a,…c);
+const p    = (a,…c) => h(“p”,a,…c);
+const span = (a,…c) => h(“span”,a,…c);
+const btn  = (a,…c) => h(“button”,a,…c);
+const inp  = (a) => h(“input”,a);
+const sel  = (a,…c) => h(“select”,a,…c);
+const opt  = (v,t,sel) => h(“option”,{value:v,…(sel?{selected:“selected”}:{})},t);
+const ta   = (a,…c) => h(“textarea”,a,…c);
+const lbl  = (a,…c) => h(“label”,a,…c);
+
+function makeInp(attrs={}) {
+return inp({class:“inp”,…attrs});
+}
+function makeSelect(val,options,onChange) {
+const el=sel({class:“inp”,onchange:e=>onChange(e.target.value)});
+options.forEach(([v,t])=>el.appendChild(opt(v,t,v===val)));
+return el;
+}
+function makeLabel(text) { return lbl({class:“fl”},text); }
+
+function checkbox(checked) {
+return div({class:“checkbox”+(checked?” checked”:””)},checked?span({style:{color:“white”,fontSize:“13px”,fontWeight:“700”,lineHeight:“1”}},“✓”):””);
+}
+
+function ageBadge(item) {
+const age=getAge(item.fechaSubida,item.fechaActualizacion);
+return span({class:“age-badge”,style:{background:age.bg,color:age.color}},age.icon+” “+age.label);
+}
+
+function discBadge(d) {
+return d?span({class:“disc-badge”,style:{background:d.bg,color:d.color}},d.label):””;
+}
+
+// ── Score/filter ──
+function score(item,q) {
+if(!q) return 1; const ql=q.toLowerCase(); let s=0;
+if(item.nombre.toLowerCase().startsWith(ql))s+=10; else if(item.nombre.toLowerCase().includes(ql))s+=6;
+if((item.subpartida||””).toLowerCase().includes(ql))s+=4;
+if((item.proveedor||””).toLowerCase().includes(ql))s+=2;
+if((item.estado||””).toLowerCase().includes(ql))s+=2;
+if((item.ciudad||””).toLowerCase().includes(ql))s+=2;
+if((item.notas||””).toLowerCase().includes(ql))s+=1;
+const d=DISC.find(x=>x.id===item.disciplina);if(d&&d.label.toLowerCase().includes(ql))s+=3;
+return s;
+}
+function ageFilter(item) {
+if(S.filterAge===“all”) return true;
+const a=getAge(item.fechaSubida,item.fechaActualizacion);
+if(S.filterAge===“verde”)    return a.months!==null&&a.months<6;
+if(S.filterAge===“amarillo”) return a.months!==null&&a.months>=6&&a.months<12;
+if(S.filterAge===“naranja”)  return a.months!==null&&a.months>=12&&a.months<18;
+if(S.filterAge===“rojo”)     return a.months!==null&&a.months>=18;
+return true;
+}
+function getFiltered() {
+return S.items
+.filter(i=>S.filterDisc===“all”||i.disciplina===S.filterDisc)
+.filter(ageFilter)
+.filter(i=>!S.search||score(i,S.search)>0)
+.sort((a,b)=>{
+if(S.search) return score(b,S.search)-score(a,S.search);
+if(S.sortBy===“precio”) return Number(a.precio)-Number(b.precio);
+if(S.sortBy===“precioDesc”) return Number(b.precio)-Number(a.precio);
+if(S.sortBy===“fecha”) return (b.fechaSubida||””).localeCompare(a.fechaSubida||””);
+if(S.sortBy===“antiguedad”) return (a.fechaActualizacion||a.fechaSubida||””).localeCompare(b.fechaActualizacion||b.fechaSubida||””);
+return a.nombre.localeCompare(b.nombre);
+});
+}
+
+// ── Export CSV ──
+function exportCSV() {
+if(!S.items.length){showToast(“No hay materiales”,“err”);return;}
+const h=[“Nombre”,“Disciplina”,“Sub-Partida”,“Unidad”,“Precio”,“Proveedor”,“Estado”,“Ciudad”,“F.Cotización”,“F.Subida”,“F.Actualización”,“Notas”];
+const rows=S.items.map(i=>[i.nombre,getDisc(i.disciplina)?.label||i.disciplina,i.subpartida||””,i.unidad,Number(i.precio).toFixed(2),i.proveedor||””,i.estado||””,i.ciudad||””,i.fecha||””,i.fechaSubida||””,i.fechaActualizacion||””,i.notas||””]);
+const csv=[h,…rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(”,”)).join(”\n”);
+const a=document.createElement(“a”);a.href=“data:text/csv;charset=utf-8,\uFEFF”+encodeURIComponent(csv);a.download=“Precios_”+today()+”.csv”;a.click();
+showToast(“Exportado ✓”);
+}
+
+// ── Cotización helpers ──
+function getEffPct(ci) {
+if(S.pctMode===“global”) return Number(S.globalPct)||0;
+if(S.pctMode===“individual”) return Number(ci.pct)||0;
+return Number(S.cotGroups.find(g=>g.id===ci.groupId)?.pct)||0;
+}
+function getResumenRows() {
+return S.cotItems.map(ci=>{
+const item=S.items.find(i=>i.id===ci.itemId);if(!item)return null;
+const cant=Number(ci.cantidad)||1,pct=getEffPct(ci),precioU=Number(item.precio)||0;
+const subtot=precioU*cant,utilU=precioU*(pct/100),totalU=precioU+utilU,utilTot=utilU*cant,totalTot=totalU*cant;
+return{item,ci,cant,pct,precioU,subtot,utilU,totalU,utilTot,totalTot};
+}).filter(Boolean);
+}
+function exportCotCSV() {
+const rows=getResumenRows();
+const grandSub=rows.reduce((s,r)=>s+r.subtot,0),grandUtil=rows.reduce((s,r)=>s+r.utilTot,0),grandTotal=rows.reduce((s,r)=>s+r.totalTot,0);
+const h=[”#”,“Material”,“Disciplina”,“Unidad”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”];
+const data=rows.map((r,i)=>[i+1,r.item.nombre,getDisc(r.item.disciplina)?.label||r.item.disciplina,r.item.unidad,r.cant,r.precioU.toFixed(2),r.subtot.toFixed(2),r.pct+”%”,r.utilTot.toFixed(2),r.totalU.toFixed(2),r.totalTot.toFixed(2)]);
+data.push([]);data.push([””,””,””,””,””,“SUBTOTAL”,grandSub.toFixed(2),””,“UTILIDAD”,“TOTAL VENTA”,grandTotal.toFixed(2)]);
+const csv=[h,…data].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(”,”)).join(”\n”);
+const a=document.createElement(“a”);a.href=“data:text/csv;charset=utf-8,\uFEFF”+encodeURIComponent(csv);a.download=“Cotizacion_”+(S.cotNombre||“Nueva”)+”_”+today()+”.csv”;a.click();
+showToast(“Cotización exportada ✓”);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER SECTIONS
+// ══════════════════════════════════════════════════════════════════
+
+function renderItemCard(item) {
+const d=getDisc(item.disciplina);
+const age=getAge(item.fechaSubida,item.fechaActualizacion);
+const isOld=(age.months||0)>=12;
+const card=div({class:“item-card”,style:{border:“1.5px solid “+(isOld?”#FECACA”:”#F1F5F9”)}});
+
+// Main row
+const main=div({style:{padding:“14px 16px”,display:“flex”,alignItems:“center”,gap:“12px”,flexWrap:“wrap”}});
+if(d) main.appendChild(div({style:{width:“42px”,height:“42px”,borderRadius:“10px”,background:d.bg,display:“flex”,alignItems:“center”,justifyContent:“center”,fontSize:“20px”,flexShrink:“0”}},d.icon));
+
+const info=div({style:{flex:“1”,minWidth:“160px”}});
+info.appendChild(p({style:{margin:0,fontWeight:“700”,fontSize:“14px”,color:”#1E293B”}},item.nombre));
+
+const tags=div({style:{display:“flex”,gap:“6px”,marginTop:“3px”,flexWrap:“wrap”,alignItems:“center”}});
+if(d) tags.appendChild(discBadge(d));
+if(item.subpartida) tags.appendChild(span({style:{fontSize:“11px”,color:”#64748B”}},”· “+item.subpartida));
+if(item.proveedor) tags.appendChild(span({style:{fontSize:“11px”,color:”#94A3B8”}},”· “+item.proveedor));
+info.appendChild(tags);
+
+const tags2=div({style:{display:“flex”,gap:“8px”,marginTop:“4px”,flexWrap:“wrap”,alignItems:“center”}});
+const loc=[item.ciudad,item.estado].filter(Boolean).join(”, “);
+if(loc) tags2.appendChild(span({class:“loc-tag”},“📍 “+loc));
+tags2.appendChild(ageBadge(item));
+if(item.fechaSubida) tags2.appendChild(span({class:“date-tag”},“Subido: “+item.fechaSubida));
+if(item.fechaActualizacion) tags2.appendChild(span({class:“upd-tag”},“Actualizado: “+item.fechaActualizacion));
+info.appendChild(tags2);
+if(item.notas) info.appendChild(p({style:{margin:“3px 0 0”,fontSize:“12px”,color:”#94A3B8”}},item.notas));
+main.appendChild(info);
+
+const priceDiv=div({style:{textAlign:“right”,flexShrink:“0”}});
+priceDiv.appendChild(p({style:{margin:0,fontWeight:“700”,fontSize:“17px”}},fmt(item.precio)));
+priceDiv.appendChild(p({style:{margin:“1px 0 0”,fontSize:“12px”,color:”#94A3B8”}},“por “+item.unidad));
+main.appendChild(priceDiv);
+
+const actions=div({style:{display:“flex”,gap:“6px”,flexShrink:“0”}});
+const qBtn=btn({style:{background:isOld?”#FEF2F2”:”#F1F5F9”,border:“none”,color:isOld?”#EF4444”:”#64748B”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+onclick:()=>{ setState({quickEditId:item.id,quickEditVal:item.precio}); }
+},“💲”);
+const eBtn=btn({style:{background:”#EFF6FF”,border:“none”,color:”#3B82F6”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+onclick:()=>{ setState({view:“agregar”,editItem:item,form:{…item}}); }
+},“✏️”);
+const dBtn=btn({style:{background:”#FEF2F2”,border:“none”,color:”#EF4444”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+onclick:()=>setState({confirmDel:item.id})
+},“🗑️”);
+actions.appendChild(qBtn);actions.appendChild(eBtn);actions.appendChild(dBtn);
+main.appendChild(actions);
+card.appendChild(main);
+
+// Quick edit panel
+if(S.quickEditId===item.id) {
+const panel=div({style:{padding:“12px 16px”,borderTop:“2px solid “+age.bg,background:age.bg,display:“flex”,alignItems:“center”,gap:“10px”,flexWrap:“wrap”}});
+panel.appendChild(span({style:{fontSize:“18px”}},age.icon));
+const pInfo=div({style:{flex:“1”}});
+pInfo.appendChild(p({style:{margin:“0 0 2px”,fontSize:“12px”,fontWeight:“700”,color:age.color}},“Actualizar precio”));
+pInfo.appendChild(p({style:{margin:0,fontSize:“11px”,color:”#64748B”}},“Actual: “+fmt(item.precio)+” · Fecha: “+today()));
+panel.appendChild(pInfo);
+const row=div({style:{display:“flex”,alignItems:“center”,gap:“8px”,flexShrink:“0”}});
+row.appendChild(span({style:{fontWeight:“600”,color:”#64748B”}},”$”));
+const pi=inp({type:“number”,min:“0”,step:“0.01”,value:S.quickEditVal,class:“inp”,style:{width:“110px”,fontWeight:“700”},oninput:e=>S.quickEditVal=e.target.value});
+row.appendChild(pi);
+row.appendChild(btn({class:“btn-green”,style:{padding:“8px 16px”,fontSize:“13px”},onclick:()=>{
+const nv=S.quickEditVal;
+if(!nv||isNaN(Number(nv))){showToast(“Precio inválido”,“err”);return;}
+persist(S.items.map(i=>i.id===item.id?{…i,precio:String(nv),fechaActualizacion:today()}:i));
+setState({quickEditId:null});showToast(“Precio actualizado ✓”);
+}},“✓”));
+row.appendChild(btn({style:{background:“none”,border:“none”,color:”#94A3B8”,fontSize:“20px”,padding:“0 4px”},onclick:()=>setState({quickEditId:null})},“×”));
+panel.appendChild(row);
+card.appendChild(panel);
+}
+return card;
+}
+
+function renderCatalogo() {
+const items=S.items;
+const alertCount=items.filter(i=>getAge(i.fechaSubida,i.fechaActualizacion).months>=12).length;
+const filtered=getFiltered();
+const wrap=div({});
+
+// Alert banner
+if(alertCount>0) {
+const banner=div({style:{background:”#FEF2F2”,border:“1px solid #FECACA”,borderRadius:“12px”,padding:“12px 16px”,marginBottom:“14px”,display:“flex”,alignItems:“center”,gap:“10px”}});
+banner.appendChild(span({style:{fontSize:“20px”}},“🔴”));
+const t=div({style:{flex:“1”}});
+t.appendChild(p({style:{margin:0,fontWeight:“700”,fontSize:“13px”,color:”#DC2626”}},alertCount+” precio”+(alertCount>1?“s”:””)+” con más de 12 meses sin actualizar”));
+t.appendChild(p({style:{margin:0,fontSize:“12px”,color:”#EF4444”}},“Filtra por 🟠 Naranja o 🔴 Rojo para verlos”));
+banner.appendChild(t);
+banner.appendChild(btn({style:{background:”#DC2626”,color:“white”,border:“none”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,fontWeight:“600”},onclick:()=>setState({filterAge:“rojo”})},“Ver”));
+wrap.appendChild(banner);
+}
+
+// Filter bar
+const fb=div({class:“filter-bar”});
+const row1=div({style:{display:“flex”,gap:“8px”,flexWrap:“wrap”,alignItems:“center”,marginBottom:“10px”}});
+const si=inp({type:“text”,class:“inp”,placeholder:“🔍 Buscar material, ciudad…”,value:S.search,style:{flex:“1 1 160px”,minWidth:“140px”},oninput:e=>setState({search:e.target.value})});
+row1.appendChild(si);
+
+const discSel=makeSelect(S.filterDisc,[[“all”,“Todas las disciplinas”],…DISC.map(d=>[d.id,d.icon+” “+d.label])],v=>setState({filterDisc:v}));
+discSel.style.flex=“1 1 120px”; row1.appendChild(discSel);
+
+const sortSel=makeSelect(S.sortBy,[[“nombre”,“A-Z”],[“precio”,“Precio ↑”],[“precioDesc”,“Precio ↓”],[“fecha”,“Más reciente”],[“antiguedad”,“Más antiguo”]],v=>setState({sortBy:v}));
+sortSel.style.flex=“1 1 100px”; row1.appendChild(sortSel);
+fb.appendChild(row1);
+
+const row2=div({style:{display:“flex”,gap:“6px”,flexWrap:“wrap”,alignItems:“center”}});
+row2.appendChild(span({style:{fontSize:“11px”,color:”#94A3B8”,marginRight:“4px”}},“Antigüedad:”));
+[[“all”,“Todos”,”#475569”,”#F1F5F9”],[“verde”,“🟢 <6m”,”#059669”,”#D1FAE5”],[“amarillo”,“🟡 6-12m”,”#D97706”,”#FEF3C7”],[“naranja”,“🟠 12-18m”,”#EA580C”,”#FFEDD5”],[“rojo”,“🔴 +18m”,”#DC2626”,”#FEE2E2”]].forEach(([id,label,color,bg])=>{
+const active=S.filterAge===id;
+row2.appendChild(btn({class:“age-chip”,style:{background:active?color:bg,color:active?“white”:color},onclick:()=>setState({filterAge:id})},label));
+});
+fb.appendChild(row2);
+wrap.appendChild(fb);
+
+if(!items.length) {
+const e=div({class:“empty”});
+e.appendChild(div({style:{fontSize:“52px”,marginBottom:“14px”}},“📋”));
+e.appendChild(p({style:{fontWeight:“700”,fontSize:“17px”,color:”#475569”,marginBottom:“6px”}},“Base de datos vacía”));
+e.appendChild(p({style:{fontSize:“13px”,marginBottom:“18px”}},“Agrega materiales manualmente o escanea una cotización”));
+e.appendChild(btn({class:“btn-primary”,onclick:()=>setState({view:“agregar”,editItem:null,form:emptyForm()})},”+ Agregar primer material”));
+wrap.appendChild(e); return wrap;
+}
+if(!filtered.length) {
+const e=div({class:“empty”});
+e.appendChild(div({style:{fontSize:“52px”,marginBottom:“14px”}},“🔎”));
+e.appendChild(p({style:{fontWeight:“700”,fontSize:“17px”,color:”#475569”,marginBottom:“18px”}},“Sin resultados”));
+e.appendChild(btn({class:“btn-primary”,onclick:()=>setState({search:””,filterDisc:“all”,filterAge:“all”})},“Limpiar filtros”));
+wrap.appendChild(e); return wrap;
+}
+wrap.appendChild(p({style:{color:”#64748B”,fontSize:“13px”,margin:“0 0 10px”}},filtered.length+” de “+items.length+” materiales”));
+filtered.forEach(item=>wrap.appendChild(renderItemCard(item)));
+return wrap;
+}
+
+function renderBusqueda() {
+const filtered=getFiltered();
+const wrap=div({});
+const box=div({style:{background:“white”,borderRadius:“16px”,padding:“20px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“16px”}});
+box.appendChild(h(“h2”,{style:{margin:“0 0 14px”,fontSize:“15px”}},“🔍 Búsqueda de Materiales”));
+const si=inp({type:“text”,class:“inp”,placeholder:“Nombre, partida, proveedor, estado, ciudad…”,value:S.search,style:{fontSize:“16px”,marginBottom:“14px”},oninput:e=>setState({search:e.target.value,view:“buscar”})});
+box.appendChild(si);
+const chips=div({style:{display:“flex”,flexWrap:“wrap”,gap:“7px”}});
+[[“all”,“Todas (”+S.items.length+”)”,”#1E293B”,”#F1F5F9”],…DISC.filter(d=>S.items.some(i=>i.disciplina===d.id)).map(d=>[d.id,d.icon+” “+d.label.split(”/”)[0].trim()+” (”+S.items.filter(i=>i.disciplina===d.id).length+”)”,d.color,d.bg])].forEach(([id,label,color,bg])=>{
+const active=S.filterDisc===id;
+chips.appendChild(btn({style:{padding:“5px 12px”,borderRadius:“20px”,border:“none”,fontSize:“12px”,fontWeight:“600”,background:active?color:bg,color:active?“white”:color},onclick:()=>setState({filterDisc:id,view:“buscar”})},label));
+});
+box.appendChild(chips);
+wrap.appendChild(box);
+if(!S.search&&S.filterDisc===“all”) {
+const e=div({style:{textAlign:“center”,padding:“52px 24px”,color:”#94A3B8”}});
+e.appendChild(div({style:{fontSize:“52px”,marginBottom:“14px”}},“🔍”));
+e.appendChild(p({style:{fontWeight:“600”,fontSize:“15px”,color:”#475569”,margin:“0 0 6px”}},“Escribe para buscar”));
+e.appendChild(p({style:{fontSize:“13px”,margin:“0 0 20px”}},“Por nombre, partida, proveedor, estado o ciudad”));
+const sugs=div({style:{display:“flex”,justifyContent:“center”,gap:“7px”,flexWrap:“wrap”}});
+[“tornillo”,“cable”,“tubo”,“varilla”,“Monterrey”,“Jalisco”].forEach(t=>sugs.appendChild(btn({style:{padding:“6px 14px”,borderRadius:“20px”,background:”#F1F5F9”,border:“1px solid #E2E8F0”,fontSize:“12px”,color:”#475569”},onclick:()=>setState({search:t,view:“buscar”})},t)));
+e.appendChild(sugs); wrap.appendChild(e); return wrap;
+}
+if(!filtered.length) {
+const e=div({class:“empty”});
+e.appendChild(div({style:{fontSize:“52px”,marginBottom:“14px”}},“🔎”));
+e.appendChild(p({style:{fontWeight:“700”,fontSize:“17px”,color:”#475569”,marginBottom:“18px”}},“Sin resultados”));
+e.appendChild(btn({class:“btn-primary”,onclick:()=>setState({search:””,filterDisc:“all”})},“Limpiar”));
+wrap.appendChild(e); return wrap;
+}
+wrap.appendChild(p({style:{color:”#64748B”,fontSize:“13px”,margin:“0 0 10px”}},filtered.length+” resultado”+(filtered.length!==1?“s”:””)+(S.search?’ para “’+S.search+’”’:””)));
+filtered.forEach(item=>wrap.appendChild(renderItemCard(item)));
+return wrap;
+}
+
+function renderEscanear() {
+const wrap=div({});
+if(S.scanStep===“idle”) {
+const box=div({style:{background:“white”,borderRadius:“14px”,padding:“18px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”}});
+box.appendChild(h(“h2”,{style:{margin:“0 0 6px”,fontSize:“17px”}},“📷 Escanear Cotización”));
+box.appendChild(p({style:{margin:“0 0 16px”,color:”#64748B”,fontSize:“13px”}},“Sube una foto o PDF y la IA extrae los materiales y precios automáticamente.”));
+
+```
+// Location
+const locBox=div({style:{background:"#F8FAFC",borderRadius:"10px",padding:"14px 16px",marginBottom:"16px",border:"1.5px solid #E2E8F0"}});
+locBox.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}},"📍 Ubicación del documento (opcional)"));
+const locGrid=div({class:"grid2"});
+const lEstado=div({});
+lEstado.appendChild(makeLabel("Estado"));
+const esSel=makeSelect(S.scanLoc.estado,[["","Sin especificar"],...ESTADOS.map(s=>[s,s])],v=>{ S.scanLoc={...S.scanLoc,estado:v}; });
+lEstado.appendChild(esSel); locGrid.appendChild(lEstado);
+const lCiudad=div({});
+lCiudad.appendChild(makeLabel("Ciudad"));
+const ciInp=inp({class:"inp",type:"text",placeholder:"Ej: Monterrey",value:S.scanLoc.ciudad,oninput:e=>{ S.scanLoc={...S.scanLoc,ciudad:e.target.value}; }});
+lCiudad.appendChild(ciInp); locGrid.appendChild(lCiudad);
+locBox.appendChild(locGrid); box.appendChild(locBox);
+
+// Drop zone
+const fileInput=inp({type:"file",accept:"image/*,application/pdf",style:{display:"none"},onchange:async e=>{
+  const file=e.target.files?.[0]; if(!file) return; e.target.value="";
+  const isImg=file.type.startsWith("image/"),isPdf=file.type==="application/pdf";
+  if(!isImg&&!isPdf){setState({scanErr:"Solo imágenes o PDF."});return;}
+  setState({scanStep:"scanning",scanErr:"",scanResults:[],scanSel:{},scanEdits:{},scanPreview:isImg?URL.createObjectURL(file):null});
+  try {
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
+    const extracted=await extractFromFile(b64,file.type);
+    if(!extracted.length){setState({scanStep:"idle",scanErr:"No encontré materiales. Intenta con imagen más clara."});return;}
+    const tagged=extracted.map(x=>({...x,_id:genId(),estado:x.estado||S.scanLoc.estado,ciudad:x.ciudad||S.scanLoc.ciudad}));
+    const sel={};tagged.forEach(t=>{sel[t._id]=true;});
+    setState({scanStep:"review",scanResults:tagged,scanSel:sel,scanEdits:{}});
+  } catch(err) { setState({scanStep:"idle",scanErr:err.message||"Error al procesar."}); }
+}});
+document.body.appendChild(fileInput);
+const drop=div({class:"scan-drop",onclick:()=>fileInput.click()});
+drop.appendChild(div({style:{fontSize:"52px",marginBottom:"12px"}},"📄"));
+drop.appendChild(p({style:{fontWeight:"700",color:"#334155",fontSize:"16px",marginBottom:"6px"}},"Toca para subir archivo"));
+drop.appendChild(p({style:{color:"#94A3B8",fontSize:"13px"}},"JPG, PNG o PDF"));
+box.appendChild(drop);
+if(S.scanErr) box.appendChild(div({style:{marginTop:"14px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"10px",padding:"12px 16px",color:"#DC2626",fontSize:"13px"}},"⚠️ "+S.scanErr));
+wrap.appendChild(box);
+```
+
+}
+else if(S.scanStep===“scanning”) {
+const box=div({style:{background:“white”,borderRadius:“16px”,padding:“48px”,textAlign:“center”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”}});
+box.appendChild(div({style:{fontSize:“52px”,marginBottom:“16px”}},span({class:“spin”},“⚙️”)));
+box.appendChild(h(“h3”,{style:{margin:“0 0 8px”}},“Analizando cotización…”));
+box.appendChild(p({style:{margin:0,color:”#64748B”,fontSize:“13px”}},“La IA está extrayendo materiales y precios”));
+wrap.appendChild(box);
+}
+else if(S.scanStep===“review”) {
+if(S.scanPreview) {
+const pv=div({style:{background:“white”,borderRadius:“12px”,padding:“12px”,marginBottom:“14px”,boxShadow:“0 1px 6px rgba(0,0,0,.06)”}});
+const img=h(“img”,{src:S.scanPreview,alt:“Cotización”,style:{width:“100%”,maxHeight:“200px”,objectFit:“contain”,borderRadius:“8px”,border:“1px solid #E2E8F0”}});
+pv.appendChild(img); wrap.appendChild(pv);
+}
+const selCount=Object.values(S.scanSel).filter(Boolean).length;
+const header=div({style:{background:“white”,borderRadius:“16px”,padding:“20px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“14px”}});
+const htop=div({style:{display:“flex”,alignItems:“center”,justifyContent:“space-between”,marginBottom:“10px”}});
+htop.appendChild(h(“h2”,{style:{margin:0,fontSize:“16px”}},“✅ “+S.scanResults.length+” materiales encontrados”));
+htop.appendChild(span({style:{fontSize:“12px”,color:”#64748B”}},selCount+” seleccionados”));
+header.appendChild(htop);
+header.appendChild(p({style:{margin:“0 0 12px”,fontSize:“13px”,color:”#64748B”}},“Revisa y edita cada artículo antes de guardar.”));
+const hbts=div({style:{display:“flex”,gap:“8px”,flexWrap:“wrap”}});
+hbts.appendChild(btn({style:{background:”#EFF6FF”,border:“none”,color:”#3B82F6”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,fontWeight:“600”},onclick:()=>{const s={};S.scanResults.forEach(r=>{s[r._id]=true;});setState({scanSel:s});}},“✓ Todos”));
+hbts.appendChild(btn({style:{background:”#F1F5F9”,border:“none”,color:”#64748B”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”},onclick:()=>setState({scanSel:{}})},“Ninguno”));
+hbts.appendChild(btn({style:{background:”#F1F5F9”,border:“none”,color:”#64748B”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,marginLeft:“auto”},onclick:()=>setState({scanStep:“idle”,scanResults:[],scanPreview:null})},“↩ Nuevo archivo”));
+header.appendChild(hbts);
+wrap.appendChild(header);
+
+```
+S.scanResults.forEach(raw=>{
+  const item={...raw,...(S.scanEdits[raw._id]||{})};
+  const d=getDisc(item.disciplina);
+  const sel=!!S.scanSel[raw._id];
+  const card=div({style:{background:"white",borderRadius:"12px",marginBottom:"10px",boxShadow:"0 1px 6px rgba(0,0,0,.06)",overflow:"hidden",border:"2px solid "+(sel?"#3B82F6":"#E2E8F0")}});
+  const top=div({style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px",cursor:"pointer",background:sel?"#EFF6FF":"white"},onclick:()=>{const s={...S.scanSel};s[raw._id]=!s[raw._id];setState({scanSel:s});}});
+  top.appendChild(checkbox(sel));
+  if(d) top.appendChild(div({style:{width:"36px",height:"36px",borderRadius:"8px",background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:"0"}},d.icon));
+  const iInfo=div({style:{flex:"1",minWidth:"0"}});
+  iInfo.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},item.nombre));
+  const itags=div({style:{display:"flex",gap:"5px",marginTop:"2px",flexWrap:"wrap"}});
+  if(d) itags.appendChild(discBadge(d));
+  const loc=[item.ciudad,item.estado].filter(Boolean).join(", ");
+  if(loc) itags.appendChild(span({style:{fontSize:"11px",color:"#06B6D4"}},"· "+loc));
+  iInfo.appendChild(itags); top.appendChild(iInfo);
+  const iPrice=div({style:{textAlign:"right",flexShrink:"0"}});
+  iPrice.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"15px"}},fmt(item.precio)));
+  iPrice.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}},"/"+item.unidad));
+  top.appendChild(iPrice); card.appendChild(top);
+
+  if(sel) {
+    const edit=div({style:{padding:"14px 16px",borderTop:"1px solid #DBEAFE",background:"#F8FBFF"}});
+    edit.appendChild(p({style:{margin:"0 0 10px",fontSize:"11px",fontWeight:"700",color:"#3B82F6",textTransform:"uppercase"}},"✏️ Editar antes de guardar"));
+    const g=div({class:"grid2"});
+    function addField(label,field,type="text",options=null,span2=false) {
+      const fd=div({class:span2?"span2":""});
+      fd.appendChild(lbl({style:{display:"block",fontSize:"10px",fontWeight:"700",color:"#94A3B8",marginBottom:"4px",textTransform:"uppercase"}},label));
+      if(options) {
+        const s=makeSelect(item[field]||"",options,v=>{const e={...S.scanEdits};e[raw._id]={...e[raw._id],[field]:v};setState({scanEdits:e});});
+        s.style.borderColor="#BFDBFE"; fd.appendChild(s);
+      } else {
+        const i=inp({class:"inp",type,value:String(item[field]||""),style:{borderColor:"#BFDBFE",...(field==="precio"?{fontWeight:"700"}:{})},oninput:e=>{const ed={...S.scanEdits};ed[raw._id]={...ed[raw._id],[field]:e.target.value};S.scanEdits=ed;}});
+        fd.appendChild(i);
+      }
+      g.appendChild(fd);
+    }
+    addField("Nombre / Nombre comercial","nombre","text",null,true);
+    addField("Precio ($)","precio","number");
+    addField("Unidad","unidad","text",UNIDADES.map(u=>[u,u]));
+    addField("Disciplina","disciplina","text",DISC.map(d=>[d.id,d.icon+" "+d.label]));
+    addField("Sub-Partida","subpartida");
+    addField("Proveedor","proveedor");
+    addField("Estado","estado","text",[["","Sin especificar"],...ESTADOS.map(s=>[s,s])]);
+    addField("Ciudad","ciudad");
+    addField("Notas","notas","text",null,true);
+    edit.appendChild(g); card.appendChild(edit);
+  }
+  wrap.appendChild(card);
+});
+
+const bar=div({class:"sticky-bar"});
+const bInfo=div({style:{flex:"1"}});
+bInfo.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px"}},selCount+" materiales seleccionados"));
+bInfo.appendChild(p({style:{margin:0,fontSize:"12px",color:"#64748B"}},"Se agregarán a la base de datos"));
+bar.appendChild(bInfo);
+bar.appendChild(btn({class:"btn-green",onclick:()=>{
+  const toSave=S.scanResults.filter(r=>S.scanSel[r._id]).map(r=>{
+    const {_id,...c}={...r,...(S.scanEdits[r._id]||{})};
+    return{...c,precio:String(c.precio||0),id:genId(),fechaSubida:today(),fechaActualizacion:""};
+  });
+  if(!toSave.length){showToast("Selecciona al menos uno","err");return;}
+  persist([...toSave,...S.items]);
+  setState({scanStep:"idle",scanResults:[],scanPreview:null,scanSel:{},scanEdits:{},scanErr:"",scanLoc:{estado:"",ciudad:""}});
+  showToast(toSave.length+" material"+(toSave.length>1?"es":"")+" guardado"+(toSave.length>1?"s":"")+" ✓");
+  setState({view:"catalogo"});
+}},"Guardar ✓"));
+wrap.appendChild(bar);
+```
+
+}
+return wrap;
+}
+
+function renderForm() {
+const isEdit=!!S.editItem;
+const wrap=div({style:{background:“white”,borderRadius:“16px”,padding:“24px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”}});
+wrap.appendChild(h(“h2”,{style:{margin:“0 0 20px”,fontSize:“17px”}},isEdit?“✏️ Editar Material”:“➕ Nuevo Material”));
+const g=div({class:“grid2”});
+function field(label,key,type=“text”,options=null,cls=””) {
+const fd=div({class:cls});
+fd.appendChild(makeLabel(label));
+if(options) {
+const s=makeSelect(S.form[key]||””,options,v=>{S.form={…S.form,[key]:v};const el=document.getElementById(“form-”+key);if(el)el.value=v;});
+s.id=“form-”+key; fd.appendChild(s);
+} else if(type===“textarea”) {
+const t=ta({class:“inp”,rows:“3”,style:{resize:“vertical”,lineHeight:“1.5”},oninput:e=>S.form={…S.form,[key]:e.target.value}},S.form[key]||””);
+fd.appendChild(t);
+} else {
+const i=inp({class:“inp”,type,value:String(S.form[key]||””),placeholder:key===“precio”?“0.00”:undefined,style:key===“precio”?{paddingLeft:“26px”}:{},oninput:e=>S.form={…S.form,[key]:e.target.value}});
+if(key===“precio”) { const w=div({style:{position:“relative”}});w.appendChild(span({style:{position:“absolute”,left:“11px”,top:“50%”,transform:“translateY(-50%)”,color:”#64748B”,fontWeight:“600”}},”$”));w.appendChild(i);fd.appendChild(w); }
+else fd.appendChild(i);
+}
+g.appendChild(fd);
+}
+field(“Nombre / Nombre comercial *”,“nombre”,“text”,null,“span2”);
+field(“Disciplina *”,“disciplina”,“text”,[[””,“Seleccionar…”],…DISC.map(d=>[d.id,d.icon+” “+d.label])]);
+field(“Sub-Partida”,“subpartida”);
+field(“Precio unitario *”,“precio”,“number”);
+field(“Unidad”,“unidad”,“text”,UNIDADES.map(u=>[u,u]));
+field(“Proveedor”,“proveedor”);
+field(“Fecha de cotización”,“fecha”,“date”);
+const locDiv=div({class:“span2”,style:{borderTop:“1px solid #E2E8F0”,paddingTop:“14px”,marginTop:“4px”}});
+locDiv.appendChild(p({style:{margin:“0 0 10px”,fontSize:“12px”,fontWeight:“700”,color:”#06B6D4”,textTransform:“uppercase”,letterSpacing:”.05em”}},“📍 Ubicación del costo”));
+g.appendChild(locDiv);
+field(“Estado”,“estado”,“text”,[[””,“Sin especificar”],…ESTADOS.map(s=>[s,s])]);
+field(“Ciudad”,“ciudad”);
+field(“Notas / Especificaciones técnicas”,“notas”,“textarea”,null,“span2”);
+if(isEdit) {
+const n=div({class:“span2”,style:{background:”#F0FFF4”,borderRadius:“8px”,padding:“10px 14px”,border:“1px solid #BBF7D0”}});
+n.appendChild(p({style:{margin:0,fontSize:“12px”,color:”#059669”}},“🕐 Se registrará automáticamente la fecha de actualización: “+today()));
+g.appendChild(n);
+}
+wrap.appendChild(g);
+const brow=div({style:{display:“flex”,gap:“10px”,marginTop:“20px”}});
+brow.appendChild(btn({class:“btn-primary”,onclick:()=>{
+const f=S.form;
+if(!f.nombre?.trim()||!f.disciplina||!f.precio){showToast(“Completa nombre, disciplina y precio”,“err”);return;}
+if(isEdit) { persist(S.items.map(i=>i.id===S.editItem.id?{…f,id:S.editItem.id,fechaActualizacion:today()}:i)); showToast(“Actualizado ✓”); }
+else { persist([{…f,id:genId(),fechaSubida:today(),fechaActualizacion:””},…S.items]); showToast(“Guardado ✓”); }
+setState({view:“catalogo”,editItem:null,form:emptyForm()});
+}},isEdit?“Guardar cambios”:“Guardar material”));
+brow.appendChild(btn({class:“btn-secondary”,onclick:()=>setState({view:“catalogo”,editItem:null,form:emptyForm()})},“Cancelar”));
+wrap.appendChild(brow);
+return wrap;
+}
+
+function renderCotizacion() {
+const wrap=div({});
+const tabs=div({style:{display:“flex”,gap:“0”,background:“white”,borderRadius:“12px”,padding:“4px”,boxShadow:“0 1px 6px rgba(0,0,0,.07)”,marginBottom:“16px”}});
+[[“select”,“1. Seleccionar”],[“configure”,“2. Utilidad”],[“resumen”,“3. Resumen”]].forEach(([s,l])=>{
+tabs.appendChild(btn({class:“cot-tab”+(S.cotView===s?” active”:””),onclick:()=>setState({cotView:s})},l));
+});
+wrap.appendChild(tabs);
+
+if(S.cotView===“select”) {
+const box=div({style:{background:“white”,borderRadius:“14px”,padding:“16px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“14px”}});
+const btop=div({style:{display:“flex”,alignItems:“center”,justifyContent:“space-between”,marginBottom:“12px”}});
+btop.appendChild(h(“h2”,{style:{margin:0,fontSize:“15px”}},“Selecciona los artículos”));
+if(S.cotItems.length) btop.appendChild(btn({class:“btn-primary”,style:{padding:“9px 16px”,fontSize:“13px”},onclick:()=>setState({cotView:“configure”})},“Siguiente →”));
+box.appendChild(btop);
+const si=inp({class:“inp”,type:“text”,placeholder:“🔍 Buscar…”,value:S.cotSearch,oninput:e=>setState({cotSearch:e.target.value,cotView:“select”})});
+box.appendChild(si); wrap.appendChild(box);
+
+```
+if(!S.items.length) { wrap.appendChild(div({class:"empty"},"No hay materiales aún")); return wrap; }
+const cotFiltered=S.items.filter(i=>S.cotFilterDisc==="all"||i.disciplina===S.cotFilterDisc).filter(i=>!S.cotSearch||score(i,S.cotSearch)>0).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+cotFiltered.forEach(item=>{
+  const sel=S.cotItems.some(c=>c.itemId===item.id);
+  const ci=S.cotItems.find(c=>c.itemId===item.id);
+  const d=getDisc(item.disciplina);
+  const age=getAge(item.fechaSubida,item.fechaActualizacion);
+  const card=div({style:{background:"white",borderRadius:"11px",marginBottom:"9px",boxShadow:"0 1px 5px rgba(0,0,0,.06)",overflow:"hidden",border:"2px solid "+(sel?"#3B82F6":"#E2E8F0")}});
+  const top=div({style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px",cursor:"pointer",background:sel?"#EFF6FF":"white"},onclick:()=>{
+    if(sel) setState({cotItems:S.cotItems.filter(c=>c.itemId!==item.id)});
+    else setState({cotItems:[...S.cotItems,{itemId:item.id,cantidad:"1",pct:S.globalPct,groupId:S.cotGroups[0]?.id||"g1"}]});
+  }});
+  top.appendChild(checkbox(sel));
+  if(d) top.appendChild(div({style:{width:"36px",height:"36px",borderRadius:"8px",background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:"0"}},d.icon));
+  const ii=div({style:{flex:"1",minWidth:"0"}});
+  ii.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},item.nombre));
+  const itg=div({style:{display:"flex",gap:"5px",marginTop:"2px",flexWrap:"wrap",alignItems:"center"}});
+  if(d) itg.appendChild(discBadge(d));
+  const loc=[item.ciudad,item.estado].filter(Boolean).join(", ");
+  if(loc) itg.appendChild(span({style:{fontSize:"11px",color:"#06B6D4"}},"📍 "+loc));
+  itg.appendChild(span({class:"age-badge",style:{background:age.bg,color:age.color}},age.icon+" "+age.label));
+  ii.appendChild(itg); top.appendChild(ii);
+  const ip=div({style:{textAlign:"right",flexShrink:"0"}});
+  ip.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"15px"}},fmt(item.precio)));
+  ip.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}},"/"+item.unidad));
+  top.appendChild(ip); card.appendChild(top);
+  if(sel&&ci) {
+    const qrow=div({style:{padding:"10px 14px",borderTop:"1px solid #DBEAFE",background:"#F0F7FF",display:"flex",alignItems:"center",gap:"12px"}});
+    qrow.appendChild(span({style:{fontSize:"11px",fontWeight:"700",color:"#3B82F6",textTransform:"uppercase"}},"Cantidad"));
+    const qi=inp({type:"number",min:"0.01",step:"any",value:ci.cantidad,style:{width:"90px",padding:"6px 10px",borderRadius:"7px",border:"1.5px solid #BFDBFE",fontSize:"14px",fontWeight:"700",textAlign:"center"},oninput:e=>{const upd=S.cotItems.map(c=>c.itemId===item.id?{...c,cantidad:e.target.value}:c);S.cotItems=upd;}});
+    qrow.appendChild(qi);
+    qrow.appendChild(span({style:{fontSize:"12px",color:"#64748B"}},item.unidad));
+    qrow.appendChild(span({style:{marginLeft:"auto",fontSize:"12px",color:"#3B82F6",fontWeight:"600"}},"Subtotal: "+fmt(Number(item.precio)*(Number(ci.cantidad)||1))));
+    card.appendChild(qrow);
+  }
+  wrap.appendChild(card);
+});
+if(S.cotItems.length) {
+  const bar=div({class:"sticky-bar"});
+  const totalCost=S.cotItems.reduce((s,ci)=>{const it=S.items.find(i=>i.id===ci.itemId);return s+(Number(it?.precio||0)*Number(ci.cantidad||1));},0);
+  const bi=div({style:{flex:"1"}});
+  bi.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px"}},S.cotItems.length+" artículo"+(S.cotItems.length!==1?"s":"")+" seleccionado"+(S.cotItems.length!==1?"s":"")));
+  bi.appendChild(p({style:{margin:0,fontSize:"12px",color:"#64748B"}},"Costo: "+fmt(totalCost)));
+  bar.appendChild(bi);
+  bar.appendChild(btn({class:"btn-primary",onclick:()=>setState({cotView:"configure"})},"Configurar utilidad →"));
+  wrap.appendChild(bar);
+}
+```
+
+}
+else if(S.cotView===“configure”) {
+const box=div({style:{background:“white”,borderRadius:“14px”,padding:“18px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“14px”}});
+box.appendChild(h(“h2”,{style:{margin:“0 0 14px”,fontSize:“15px”}},“Datos de la cotización”));
+const dg=div({class:“grid2”});
+const nf=div({});nf.appendChild(makeLabel(“Nombre / Folio”));
+const ni=inp({class:“inp”,type:“text”,placeholder:“COT-2024-001”,value:S.cotNombre,oninput:e=>S.cotNombre=e.target.value});
+nf.appendChild(ni);dg.appendChild(nf);
+const cf=div({});cf.appendChild(makeLabel(“Cliente”));
+const ci=inp({class:“inp”,type:“text”,placeholder:“Nombre del cliente”,value:S.cotCliente,oninput:e=>S.cotCliente=e.target.value});
+cf.appendChild(ci);dg.appendChild(cf);
+box.appendChild(dg);wrap.appendChild(box);
+
+```
+const box2=div({style:{background:"white",borderRadius:"14px",padding:"18px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px"}});
+box2.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}},"Modo de utilidad"));
+const mg=div({style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"16px"}});
+[{id:"global",icon:"🌐",label:"% Global",desc:"Un % para todos"},{id:"group",icon:"🗂️",label:"Por grupos",desc:"Grupos distintos"},{id:"individual",icon:"🎯",label:"Individual",desc:"% por artículo"}].forEach(m=>{
+  const active=S.pctMode===m.id;
+  const mb=btn({style:{padding:"12px 8px",borderRadius:"10px",border:"2px solid "+(active?"#3B82F6":"#E2E8F0"),background:active?"#EFF6FF":"white",textAlign:"center"},onclick:()=>setState({pctMode:m.id})});
+  mb.appendChild(div({style:{fontSize:"22px",marginBottom:"4px"}},m.icon));
+  mb.appendChild(p({style:{margin:"0 0 2px",fontWeight:"700",fontSize:"12px",color:active?"#1D4ED8":"#334155"}},m.label));
+  mb.appendChild(p({style:{margin:0,fontSize:"10px",color:"#94A3B8"}},m.desc));
+  mg.appendChild(mb);
+});
+box2.appendChild(mg);
+if(S.pctMode==="global") {
+  const gp=div({style:{background:"#F8FAFC",borderRadius:"10px",padding:"16px",display:"flex",alignItems:"center",gap:"14px"}});
+  gp.appendChild(span({style:{fontSize:"24px"}},"🌐"));
+  const gpf=div({style:{flex:"1"}});
+  gpf.appendChild(makeLabel("% de utilidad para todos"));
+  const gpr=div({style:{display:"flex",alignItems:"center",gap:"8px"}});
+  const gpi=inp({class:"inp",type:"number",min:"0",max:"999",step:"0.5",value:S.globalPct,style:{width:"100px",textAlign:"center",fontWeight:"700",fontSize:"18px"},oninput:e=>{S.globalPct=e.target.value;S.cotItems=S.cotItems.map(c=>({...c,pct:e.target.value}));}});
+  gpr.appendChild(gpi);gpr.appendChild(span({style:{fontWeight:"700",fontSize:"18px",color:"#64748B"}},"%"));
+  gpf.appendChild(gpr);gp.appendChild(gpf);box2.appendChild(gp);
+}
+if(S.pctMode==="individual") {
+  S.cotItems.forEach(ci=>{
+    const it=S.items.find(i=>i.id===ci.itemId);if(!it)return;
+    const d=getDisc(it.disciplina);const precioU=Number(it.precio)||0,cant=Number(ci.cantidad)||1,pct=Number(ci.pct)||0,totalU=precioU*(1+pct/100);
+    const row=div({style:{background:"#F8FAFC",borderRadius:"9px",padding:"12px 14px",marginBottom:"8px",display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}});
+    if(d) row.appendChild(span({style:{fontSize:"20px"}},d.icon));
+    const ri=div({style:{flex:"1",minWidth:"160px"}});
+    ri.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px"}},it.nombre));
+    ri.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}},fmt(precioU)+"/"+it.unidad+" · cant: "+cant));
+    row.appendChild(ri);
+    const pr=div({style:{display:"flex",alignItems:"center",gap:"6px",flexShrink:"0"}});
+    const pi=inp({class:"inp",type:"number",min:"0",max:"999",step:"0.5",value:ci.pct,style:{width:"74px",textAlign:"center",fontWeight:"700",padding:"7px 8px"},oninput:e=>{S.cotItems=S.cotItems.map(c=>c.itemId===it.id?{...c,pct:e.target.value}:c);}});
+    pr.appendChild(pi);pr.appendChild(span({style:{fontWeight:"700",color:"#64748B"}},"%"));
+    row.appendChild(pr);
+    const rv=div({style:{textAlign:"right",flexShrink:"0",minWidth:"110px"}});
+    rv.appendChild(p({style:{margin:0,fontSize:"11px",color:"#64748B"}},"P.venta unit."));
+    rv.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px",color:"#10B981"}},fmt(totalU)));
+    rv.appendChild(p({style:{margin:0,fontSize:"11px",color:"#64748B"}},"Total: "+fmt(totalU*cant)));
+    row.appendChild(rv);box2.appendChild(row);
+  });
+}
+wrap.appendChild(box2);
+const brow=div({style:{display:"flex",gap:"10px",justifyContent:"flex-end"}});
+brow.appendChild(btn({class:"btn-secondary",onclick:()=>setState({cotView:"select"})},"← Volver"));
+brow.appendChild(btn({class:"btn-green",onclick:()=>setState({cotView:"resumen"})},"Ver resumen →"));
+wrap.appendChild(brow);
+```
+
+}
+else if(S.cotView===“resumen”) {
+const rows=getResumenRows();
+const grandSub=rows.reduce((s,r)=>s+r.subtot,0),grandUtil=rows.reduce((s,r)=>s+r.utilTot,0),grandTotal=rows.reduce((s,r)=>s+r.totalTot,0);
+const hdr=div({style:{background:“linear-gradient(135deg,#1E293B,#334155)”,borderRadius:“14px”,padding:“20px”,marginBottom:“14px”,color:“white”}});
+const hr=div({style:{display:“flex”,alignItems:“flex-start”,justifyContent:“space-between”,flexWrap:“wrap”,gap:“10px”}});
+const hl=div({});
+hl.appendChild(p({style:{margin:“0 0 2px”,fontSize:“11px”,color:”#94A3B8”,textTransform:“uppercase”}},“Cotización”));
+hl.appendChild(h(“h2”,{style:{margin:“0 0 4px”,fontSize:“20px”,fontWeight:“700”,color:“white”}},S.cotNombre||“Sin nombre”));
+if(S.cotCliente) hl.appendChild(p({style:{margin:0,fontSize:“13px”,color:”#CBD5E1”}},“Cliente: “+S.cotCliente));
+hl.appendChild(p({style:{margin:“4px 0 0”,fontSize:“12px”,color:”#94A3B8”}},today()+” · “+S.cotItems.length+” artículos”));
+const hrr=div({style:{textAlign:“right”}});
+hrr.appendChild(p({style:{margin:“0 0 2px”,fontSize:“12px”,color:”#94A3B8”}},“Total de venta”));
+hrr.appendChild(p({style:{margin:0,fontSize:“28px”,fontWeight:“800”,color:”#34D399”}},fmt(grandTotal)));
+hr.appendChild(hl);hr.appendChild(hrr);hdr.appendChild(hr);wrap.appendChild(hdr);
+const tots=div({style:{display:“grid”,gridTemplateColumns:“repeat(3,1fr)”,gap:“10px”,marginBottom:“14px”}});
+[{label:“Costo total”,val:grandSub,color:”#1E293B”,bg:“white”},{label:“Utilidad”,val:grandUtil,color:”#D97706”,bg:”#FFFBEB”},{label:“Total venta”,val:grandTotal,color:”#059669”,bg:”#ECFDF5”}].forEach(c=>{
+const tc=div({style:{background:c.bg,borderRadius:“12px”,padding:“14px 16px”,boxShadow:“0 1px 6px rgba(0,0,0,.06)”,textAlign:“center”}});
+tc.appendChild(p({style:{margin:“0 0 4px”,fontSize:“11px”,color:”#64748B”,fontWeight:“600”,textTransform:“uppercase”}},c.label));
+tc.appendChild(p({style:{margin:0,fontSize:“16px”,fontWeight:“800”,color:c.color}},fmt(c.val)));
+tots.appendChild(tc);
+});
+wrap.appendChild(tots);
+const tbl=div({style:{background:“white”,borderRadius:“14px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“14px”,overflowX:“auto”}});
+const table=h(“table”,{});
+const thead=h(“thead”,{});const tr=h(“tr”,{});
+[“Material”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”].forEach(t=>tr.appendChild(h(“th”,{},t)));
+thead.appendChild(tr);table.appendChild(thead);
+const tbody=h(“tbody”,{});
+rows.forEach(row=>{
+const tr2=h(“tr”,{});
+[row.item.nombre,row.cant+” “+row.item.unidad,fmt(row.precioU),fmt(row.subtot),row.pct+”%”,fmt(row.utilTot),fmt(row.totalU),fmt(row.totalTot)].forEach((v,i)=>{
+const td=h(“td”,{},String(v));
+if(i===4){td.innerHTML=`<span style="background:#FEF3C7;color:#D97706;padding:2px 7px;border-radius:6px;font-weight:700">${v}</span>`;}
+if(i>=6){td.style.color=”#059669”;td.style.fontWeight=“700”;}
+if(i===5){td.style.color=”#D97706”;}
+tr2.appendChild(td);
+});
+tbody.appendChild(tr2);
+});
+table.appendChild(tbody);
+const tfoot=h(“tfoot”,{});const ftr=h(“tr”,{});
+[“TOTALES”,””,””,fmt(grandSub),””,fmt(grandUtil),””,fmt(grandTotal)].forEach((v,i)=>{const td=h(“td”,{},v);if(i===7){td.style.fontSize=“14px”;td.style.color=”#059669”;}ftr.appendChild(td);});
+tfoot.appendChild(ftr);table.appendChild(tfoot);
+tbl.appendChild(table);wrap.appendChild(tbl);
+const brow=div({style:{display:“flex”,gap:“10px”,flexWrap:“wrap”}});
+brow.appendChild(btn({class:“btn-secondary”,onclick:()=>setState({cotView:“configure”})},“← Editar”));
+brow.appendChild(btn({class:“btn-green”,onclick:exportCotCSV},“⬇ Exportar Excel”));
+brow.appendChild(btn({style:{background:”#FEF2F2”,color:”#EF4444”,border:“none”,padding:“11px 18px”,borderRadius:“10px”,fontSize:“14px”},onclick:()=>{setState({cotItems:[],cotView:“select”,cotNombre:””,cotCliente:””});showToast(“Cotización limpiada”,“info”);}},“🗑 Nueva”));
+wrap.appendChild(brow);
+}
+return wrap;
+}
+
+// ── Main render ──
+function render() {
+const app=document.getElementById(“app”);app.innerHTML=””;
+
+// Header
+const hdr=div({class:“header”});
+const htop=div({class:“header-top”});
+const logo=div({style:{display:“flex”,alignItems:“center”,gap:“10px”}});
+logo.appendChild(span({style:{fontSize:“26px”}},“📋”));
+const lt=div({});
+const alertCount=S.items.filter(i=>getAge(i.fechaSubida,i.fechaActualizacion).months>=12).length;
+lt.appendChild(h(“h1”,{style:{margin:0,color:”#F1F5F9”,fontSize:“18px”,fontWeight:“700”}},“Base de Precios”));
+const sub=p({style:{margin:0,color:”#94A3B8”,fontSize:“11px”}},S.items.length+” materiales”);
+if(alertCount>0) sub.appendChild(span({style:{color:”#FCA5A5”,marginLeft:“8px”}},”· “+alertCount+” por actualizar”));
+lt.appendChild(sub); logo.appendChild(lt); htop.appendChild(logo);
+const acts=div({style:{display:“flex”,gap:“7px”}});
+acts.appendChild(btn({style:{background:”#0F172A”,border:“1px solid #475569”,color:”#CBD5E1”,padding:“7px 11px”,borderRadius:“8px”,fontSize:“12px”,fontWeight:“600”},onclick:exportCSV},“⬇ Excel”));
+acts.appendChild(btn({style:{background:”#3B82F6”,border:“none”,color:“white”,padding:“7px 14px”,borderRadius:“8px”,fontSize:“13px”,fontWeight:“700”},onclick:()=>setState({view:“agregar”,editItem:null,form:emptyForm()})},”+ Nuevo”));
+htop.appendChild(acts); hdr.appendChild(htop);
+const tabs=div({class:“tabs”});
+const tabItems=[{id:“catalogo”,label:“📦 Catálogo”},{id:“cotizacion”,label:“🧮 Cotizar”+(S.cotItems.length?” (”+S.cotItems.length+”)”:””)},{id:“buscar”,label:“🔍 Búsqueda”},{id:“escanear”,label:“📷 Escanear”},{id:“agregar”,label:S.editItem?“✏️ Editar”:“➕ Manual”}];
+tabItems.forEach(t=>{
+tabs.appendChild(btn({class:“tab”+(S.view===t.id?” active”:””),onclick:()=>setState({view:t.id})},t.label));
+});
+hdr.appendChild(tabs); app.appendChild(hdr);
+
+// Content
+const content=div({class:“content”});
+if(S.view===“catalogo”)    content.appendChild(renderCatalogo());
+else if(S.view===“buscar”) content.appendChild(renderBusqueda());
+else if(S.view===“escanear”) content.appendChild(renderEscanear());
+else if(S.view===“agregar”) content.appendChild(renderForm());
+else if(S.view===“cotizacion”) content.appendChild(renderCotizacion());
+app.appendChild(content);
+
+// Toast
+if(S.toast) {
+const t=div({class:“toast”,style:{background:S.toast.bg}},S.toast.msg);
+app.appendChild(t);
+}
+
+// Confirm delete modal
+if(S.confirmDel) {
+const item=S.items.find(i=>i.id===S.confirmDel);
+const bg=div({class:“modal-bg”});
+const m=div({class:“modal”});
+m.appendChild(p({style:{margin:“0 0 7px”,fontWeight:“700”,fontSize:“16px”}},”¿Eliminar material?”));
+m.appendChild(p({style:{margin:“0 0 20px”,color:”#64748B”,fontSize:“14px”}},’”’+(item?.nombre||””)+”" será eliminado permanentemente.”));
+const br=div({style:{display:“flex”,gap:“10px”}});
+br.appendChild(btn({class:“btn-red”,onclick:()=>{persist(S.items.filter(i=>i.id!==S.confirmDel));setState({confirmDel:null});showToast(“Eliminado”,“info”);}},“Eliminar”));
+br.appendChild(btn({class:“btn-secondary”,onclick:()=>setState({confirmDel:null})},“Cancelar”));
+m.appendChild(br);bg.appendChild(m);app.appendChild(bg);
+}
+}
+
+render();
+</script>
+
+</body>
+</html>
