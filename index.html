@@ -251,9 +251,9 @@ return a.nombre.localeCompare(b.nombre);
 // ── Export CSV ──
 function exportCSV() {
 if(!S.items.length){showToast(“No hay materiales”,“err”);return;}
-const h=[“Nombre”,“Disciplina”,“Sub-Partida”,“Unidad”,“Precio”,“Proveedor”,“Estado”,“Ciudad”,“F.Cotización”,“F.Subida”,“F.Actualización”,“Notas”];
+const headers=[“Nombre”,“Disciplina”,“Sub-Partida”,“Unidad”,“Precio”,“Proveedor”,“Estado”,“Ciudad”,“F.Cotización”,“F.Subida”,“F.Actualización”,“Notas”];
 const rows=S.items.map(i=>[i.nombre,getDisc(i.disciplina)?.label||i.disciplina,i.subpartida||””,i.unidad,Number(i.precio).toFixed(2),i.proveedor||””,i.estado||””,i.ciudad||””,i.fecha||””,i.fechaSubida||””,i.fechaActualizacion||””,i.notas||””]);
-const csv=[h,…rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(”,”)).join(”\n”);
+const csv=[headers,…rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(”,”)).join(”\n”);
 const a=document.createElement(“a”);a.href=“data:text/csv;charset=utf-8,\uFEFF”+encodeURIComponent(csv);a.download=“Precios_”+today()+”.csv”;a.click();
 showToast(“Exportado ✓”);
 }
@@ -275,10 +275,10 @@ return{item,ci,cant,pct,precioU,subtot,utilU,totalU,utilTot,totalTot};
 function exportCotCSV() {
 const rows=getResumenRows();
 const grandSub=rows.reduce((s,r)=>s+r.subtot,0),grandUtil=rows.reduce((s,r)=>s+r.utilTot,0),grandTotal=rows.reduce((s,r)=>s+r.totalTot,0);
-const h=[”#”,“Material”,“Disciplina”,“Unidad”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”];
+const headers=[”#”,“Material”,“Disciplina”,“Unidad”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”];
 const data=rows.map((r,i)=>[i+1,r.item.nombre,getDisc(r.item.disciplina)?.label||r.item.disciplina,r.item.unidad,r.cant,r.precioU.toFixed(2),r.subtot.toFixed(2),r.pct+”%”,r.utilTot.toFixed(2),r.totalU.toFixed(2),r.totalTot.toFixed(2)]);
 data.push([]);data.push([””,””,””,””,””,“SUBTOTAL”,grandSub.toFixed(2),””,“UTILIDAD”,“TOTAL VENTA”,grandTotal.toFixed(2)]);
-const csv=[h,…data].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(”,”)).join(”\n”);
+const csv=[headers,…data].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(”,”)).join(”\n”);
 const a=document.createElement(“a”);a.href=“data:text/csv;charset=utf-8,\uFEFF”+encodeURIComponent(csv);a.download=“Cotizacion_”+(S.cotNombre||“Nueva”)+”_”+today()+”.csv”;a.click();
 showToast(“Cotización exportada ✓”);
 }
@@ -814,7 +814,7 @@ wrap.appendChild(tots);
 const tbl=div({style:{background:“white”,borderRadius:“14px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“14px”,overflowX:“auto”}});
 const table=h(“table”,{});
 const thead=h(“thead”,{});const tr=h(“tr”,{});
-[“Material”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”].forEach(t=>tr.appendChild(h(“th”,{},t)));
+[“Material”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”].forEach(t=>tr.appendChild(h(“th”,{},String(t))));
 thead.appendChild(tr);table.appendChild(thead);
 const tbody=h(“tbody”,{});
 rows.forEach(row=>{
