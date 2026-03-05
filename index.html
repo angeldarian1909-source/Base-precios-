@@ -61,6 +61,9 @@ tfoot td{font-weight:700;background:#F1F5F9 !important;border-top:2px solid #E2E
 .upd-tag{font-size:10px;color:#86EFAC;}
 select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
 </style>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -73,6 +76,54 @@ select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xm
 var ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 var API_KEY = "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";
 var STORAGE_KEY = "precios_v5";
+
+// Firebase config
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAS8KPL0eIzWZQvlehUqXrtrbnKhMFmlFs",
+  authDomain: "base-precios-unitarios.firebaseapp.com",
+  projectId: "base-precios-unitarios",
+  storageBucket: "base-precios-unitarios.firebasestorage.app",
+  messagingSenderId: "718014666569",
+  appId: "1:718014666569:web:2dbe2c34d03c0fd80f2c98"
+};
+
+// Initialize Firebase
+var fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+var db = firebase.firestore();
+var COL = "materiales";
+
+// Firebase sync state
+var fbLoaded = false;
+var fbListenerActive = false;
+
+function initFirebase() {
+  if (fbListenerActive) return;
+  fbListenerActive = true;
+  showToast("Sincronizando...", "info");
+  db.collection(COL).orderBy("fechaSubida","desc").onSnapshot(function(snap) {
+    var items = [];
+    snap.forEach(function(doc) { items.push(Object.assign({id:doc.id}, doc.data())); });
+    S.items = items;
+    saveItems(items); // keep local backup
+    fbLoaded = true;
+    render();
+    if(!fbLoaded) showToast("Datos sincronizados ✓");
+  }, function(err) {
+    console.error("Firebase error:", err);
+    showToast("Sin conexion - usando datos locales", "info");
+  });
+}
+
+function fbSave(item) {
+  var id = item.id;
+  var data = Object.assign({}, item);
+  delete data.id;
+  return db.collection(COL).doc(id).set(data);
+}
+
+function fbDelete(id) {
+  return db.collection(COL).doc(id).delete();
+}
 
 var DISC = [
   {id:"tornilleria",label:"Tornilleria / Ferreteria",color:"#F59E0B",bg:"#FEF3C7",icon:"🔩"},
@@ -106,8 +157,28 @@ function getAge(subida, act) {
 function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { return []; } }
 function saveItems(arr) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch(e) {} }
 
+var FICHA_KEY = "fichas_v1";
+function loadFichas() { try { return JSON.parse(localStorage.getItem(FICHA_KEY) || "{}"); } catch(e) { return {}; } }
+function saveFichas(obj) { try { localStorage.setItem(FICHA_KEY, JSON.stringify(obj)); } catch(e) {} }
+var fichas = loadFichas();
+
 function emptyForm() {
-  return {nombre:"",disciplina:"",subpartida:"",unidad:"pza",precio:"",proveedor:"",fecha:today(),notas:"",estado:"",ciudad:""};
+  return {nombre:"",disciplina:"",subpartida:"",unidad:"pza",precio:"",subtotal:"",iva:"",total:"",proveedor:"",fecha:today(),notas:"",estado:"",ciudad:""};
+}
+
+var IVA_RATE = 0.16;
+function calcFromSubtotal(v) {
+  var sub = parseFloat(v) || 0;
+  return { subtotal: sub.toFixed(2), iva: (sub*IVA_RATE).toFixed(2), total: (sub*(1+IVA_RATE)).toFixed(2) };
+}
+function calcFromTotal(v) {
+  var tot = parseFloat(v) || 0;
+  return { subtotal: (tot/(1+IVA_RATE)).toFixed(2), iva: (tot*IVA_RATE/(1+IVA_RATE)).toFixed(2), total: tot.toFixed(2) };
+}
+function getProveedores() {
+  var seen = {};
+  S.items.forEach(function(i){ if(i.proveedor && i.proveedor.trim()) seen[i.proveedor.trim()] = true; });
+  return Object.keys(seen).sort();
 }
 
 // State
@@ -127,7 +198,28 @@ var S = {
 };
 
 function setState(patch) { Object.assign(S, patch); render(); }
-function persist(items) { S.items = items; saveItems(items); render(); }
+function persist(items) {
+  var oldIds = S.items.map(function(i){ return i.id; });
+  var newIds = items.map(function(i){ return i.id; });
+  
+  // Find added/updated items
+  items.forEach(function(item) {
+    if (fbListenerActive) {
+      fbSave(item).catch(function(e){ console.error("fbSave error",e); });
+    }
+  });
+  
+  // Find deleted items
+  oldIds.forEach(function(id) {
+    if (newIds.indexOf(id) === -1 && fbListenerActive) {
+      fbDelete(id).catch(function(e){ console.error("fbDelete error",e); });
+    }
+  });
+  
+  S.items = items;
+  saveItems(items);
+  render();
+}
 
 function showToast(msg, type) {
   type = type || "ok";
@@ -415,6 +507,13 @@ function renderItemCard(item) {
   main.appendChild(priceDiv);
 
   var actions = div({style:{display:"flex",gap:"6px",flexShrink:"0"}});
+  var fichaItem = fichas[item.id];
+  if(fichaItem) {
+    var fBtn = btn({style:{background:"#F5F3FF",border:"none",color:"#7C3AED",width:"34px",height:"34px",borderRadius:"8px",fontSize:"15px",display:"flex",alignItems:"center",justifyContent:"center",title:"Ver ficha tecnica"},
+      onclick:function(){ var a=document.createElement("a"); a.href=fichaItem.data; a.download=fichaItem.nombre; a.click(); }
+    }, "📄");
+    actions.appendChild(fBtn);
+  }
   var qBtn = btn({style:{background:isOld?"#FEF2F2":"#F1F5F9",border:"none",color:isOld?"#EF4444":"#64748B",width:"34px",height:"34px",borderRadius:"8px",fontSize:"15px",display:"flex",alignItems:"center",justifyContent:"center"},
     onclick: function(){ setState({quickEditId:item.id, quickEditVal:item.precio}); }
   }, "💲");
@@ -510,46 +609,125 @@ function renderCatalogo() {
   return wrap;
 }
 
-function renderBusqueda() {
-  var filtered = getFiltered();
-  var wrap = div({});
-  var box = div({style:{background:"white",borderRadius:"16px",padding:"20px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"16px"}});
-  box.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}}, "🔍 Busqueda de Materiales"));
-  var si = inp({type:"text",class:"inp",placeholder:"Nombre, partida, proveedor, estado, ciudad...",value:S.search,style:{fontSize:"16px",marginBottom:"14px"}, oninput:function(e){ setState({search:e.target.value,view:"buscar"}); }});
-  box.appendChild(si);
-  var chips = div({style:{display:"flex",flexWrap:"wrap",gap:"7px"}});
-  var discOpts = [["all","Todas ("+S.items.length+")","#1E293B","#F1F5F9"]].concat(
-    DISC.filter(function(d){ return S.items.some(function(i){ return i.disciplina === d.id; }); })
-      .map(function(d){ return [d.id, d.icon+" "+d.label.split("/")[0].trim()+" ("+S.items.filter(function(i){ return i.disciplina === d.id; }).length+")", d.color, d.bg]; })
-  );
-  discOpts.forEach(function(x){
-    var id=x[0],label=x[1],color=x[2],bg=x[3];
-    var active = S.filterDisc === id;
-    chips.appendChild(btn({style:{padding:"5px 12px",borderRadius:"20px",border:"none",fontSize:"12px",fontWeight:"600",background:active?color:bg,color:active?"white":color}, onclick:function(){ setState({filterDisc:id,view:"buscar"}); }}, label));
-  });
-  box.appendChild(chips);
-  wrap.appendChild(box);
+// Highlight matching text in a string
+function highlightText(text, query) {
+  if (!query) return document.createTextNode(text);
+  var idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return document.createTextNode(text);
+  var frag = document.createDocumentFragment();
+  if (idx > 0) frag.appendChild(document.createTextNode(text.slice(0, idx)));
+  var mark = h("mark", {style:{background:"#FEF08A",color:"#1E293B",borderRadius:"3px",padding:"0 2px"}}, text.slice(idx, idx+query.length));
+  frag.appendChild(mark);
+  if (idx + query.length < text.length) frag.appendChild(document.createTextNode(text.slice(idx+query.length)));
+  return frag;
+}
 
-  if (!S.search && S.filterDisc === "all") {
+function renderBusquedaResults(container, query) {
+  container.innerHTML = "";
+  var filtered = S.items
+    .filter(function(i){ return S.filterDisc === "all" || i.disciplina === S.filterDisc; })
+    .filter(function(i){ return !query || score(i,query) > 0; })
+    .sort(function(a,b){
+      if (query) return score(b,query)-score(a,query);
+      return a.nombre.localeCompare(b.nombre);
+    });
+
+  if (!query && S.filterDisc === "all") {
     var e = div({style:{textAlign:"center",padding:"52px 24px",color:"#94A3B8"}});
     e.appendChild(div({style:{fontSize:"52px",marginBottom:"14px"}}, "🔍"));
     e.appendChild(p({style:{fontWeight:"600",fontSize:"15px",color:"#475569",margin:"0 0 6px"}}, "Escribe para buscar"));
     e.appendChild(p({style:{fontSize:"13px",margin:"0 0 20px"}}, "Por nombre, partida, proveedor, estado o ciudad"));
     var sugs = div({style:{display:"flex",justifyContent:"center",gap:"7px",flexWrap:"wrap"}});
     ["tornillo","cable","tubo","varilla","Monterrey","Jalisco"].forEach(function(t){
-      sugs.appendChild(btn({style:{padding:"6px 14px",borderRadius:"20px",background:"#F1F5F9",border:"1px solid #E2E8F0",fontSize:"12px",color:"#475569"}, onclick:function(){ setState({search:t,view:"buscar"}); }}, t));
+      sugs.appendChild(btn({style:{padding:"6px 14px",borderRadius:"20px",background:"#F1F5F9",border:"1px solid #E2E8F0",fontSize:"12px",color:"#475569"},
+        onclick:function(){
+          S.search = t;
+          var si = document.getElementById("buscar-input");
+          if(si){ si.value = t; si.focus(); }
+          renderBusquedaResults(container, t);
+        }
+      }, t));
     });
-    e.appendChild(sugs); wrap.appendChild(e); return wrap;
+    e.appendChild(sugs); container.appendChild(e); return;
   }
+
   if (!filtered.length) {
     var e2 = div({class:"empty"});
     e2.appendChild(div({style:{fontSize:"52px",marginBottom:"14px"}}, "🔎"));
     e2.appendChild(p({style:{fontWeight:"700",fontSize:"17px",color:"#475569",marginBottom:"18px"}}, "Sin resultados"));
-    e2.appendChild(btn({class:"btn-primary", onclick:function(){ setState({search:"",filterDisc:"all"}); }}, "Limpiar"));
-    wrap.appendChild(e2); return wrap;
+    e2.appendChild(btn({class:"btn-primary", onclick:function(){ 
+      S.search=""; S.filterDisc="all";
+      var si = document.getElementById("buscar-input"); if(si) si.value="";
+      renderBusquedaResults(container,"");
+    }}, "Limpiar"));
+    container.appendChild(e2); return;
   }
-  wrap.appendChild(p({style:{color:"#64748B",fontSize:"13px",margin:"0 0 10px"}}, filtered.length + " resultado" + (filtered.length !== 1 ? "s" : "") + (S.search ? ' para "' + S.search + '"' : "")));
-  filtered.forEach(function(item){ wrap.appendChild(renderItemCard(item)); });
+
+  var countEl = p({style:{color:"#64748B",fontSize:"13px",margin:"0 0 10px"}},
+    filtered.length + " resultado" + (filtered.length!==1?"s":"") + (query?' para "'+query+'"':"")); 
+  container.appendChild(countEl);
+
+  filtered.forEach(function(item){
+    var card = renderItemCard(item);
+    // Highlight nombre
+    if (query) {
+      var nombreEl = card.querySelector && card.querySelector("p");
+      if (nombreEl && nombreEl.textContent === item.nombre) {
+        nombreEl.innerHTML = "";
+        nombreEl.appendChild(highlightText(item.nombre, query));
+      }
+    }
+    container.appendChild(card);
+  });
+}
+
+function renderBusqueda() {
+  var wrap = div({});
+  var box = div({style:{background:"white",borderRadius:"16px",padding:"20px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"16px"}});
+  box.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}}, "🔍 Busqueda de Materiales"));
+
+  var si = inp({id:"buscar-input",type:"text",class:"inp",placeholder:"Nombre, partida, proveedor, estado, ciudad...",value:S.search,style:{fontSize:"16px",marginBottom:"14px"}});
+  si.oninput = function(e){
+    S.search = e.target.value;
+    renderBusquedaResults(resultsContainer, S.search);
+  };
+  box.appendChild(si);
+
+  var chips = div({style:{display:"flex",flexWrap:"wrap",gap:"7px"}});
+  var discOpts = [["all","Todas ("+S.items.length+")","#1E293B","#F1F5F9"]].concat(
+    DISC.filter(function(d){ return S.items.some(function(i){ return i.disciplina === d.id; }); })
+      .map(function(d){ return [d.id, d.icon+" "+d.label.split("/")[0].trim()+" ("+S.items.filter(function(i){ return i.disciplina===d.id; }).length+")", d.color, d.bg]; })
+  );
+  discOpts.forEach(function(x){
+    var id=x[0],label=x[1],color=x[2],bg=x[3];
+    var active = S.filterDisc === id;
+    var chipBtn = btn({style:{padding:"5px 12px",borderRadius:"20px",border:"none",fontSize:"12px",fontWeight:"600",background:active?color:bg,color:active?"white":color},
+      onclick:function(){
+        S.filterDisc = id;
+        // Update chip styles
+        chips.querySelectorAll && chips.querySelectorAll("button").forEach(function(b,bi){
+          var opt = discOpts[bi];
+          b.style.background = (S.filterDisc===opt[0]) ? opt[2] : opt[3];
+          b.style.color = (S.filterDisc===opt[0]) ? "white" : opt[2];
+        });
+        renderBusquedaResults(resultsContainer, S.search);
+      }
+    }, label);
+    chips.appendChild(chipBtn);
+  });
+  box.appendChild(chips);
+  wrap.appendChild(box);
+
+  var resultsContainer = div({id:"buscar-results"});
+  wrap.appendChild(resultsContainer);
+  renderBusquedaResults(resultsContainer, S.search);
+
+  // Auto-focus search input after render
+  setTimeout(function(){
+    var el = document.getElementById("buscar-input");
+    if(el && S.view === "buscar") el.focus();
+  }, 50);
+
   return wrap;
 }
 
@@ -714,15 +892,8 @@ function renderForm() {
       var t = ta({class:"inp",rows:"3",style:{resize:"vertical",lineHeight:"1.5"}, oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }}, S.form[key] || "");
       fd.appendChild(t);
     } else {
-      if (key === "precio") {
-        var w = div({style:{position:"relative"}});
-        w.appendChild(span({style:{position:"absolute",left:"11px",top:"50%",transform:"translateY(-50%)",color:"#64748B",fontWeight:"600"}}, "$"));
-        var i = inp({class:"inp",type:type,value:String(S.form[key]||""),placeholder:"0.00",style:{paddingLeft:"26px"}, oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }});
-        w.appendChild(i); fd.appendChild(w);
-      } else {
-        var i2 = inp({class:"inp",type:type,value:String(S.form[key]||""), oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }});
-        fd.appendChild(i2);
-      }
+      var i2 = inp({class:"inp",type:type,value:String(S.form[key]||""), oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }});
+      fd.appendChild(i2);
     }
     g.appendChild(fd);
   }
@@ -730,10 +901,80 @@ function renderForm() {
   field("Nombre / Nombre comercial *","nombre","text",null,"span2");
   field("Disciplina *","disciplina","text",[["","Seleccionar..."]].concat(DISC.map(function(d){ return [d.id, d.icon+" "+d.label]; })));
   field("Sub-Partida","subpartida");
-  field("Precio unitario *","precio","number");
   field("Unidad","unidad","text",UNIDADES.map(function(u){ return [u,u]; }));
-  field("Proveedor","proveedor");
   field("Fecha de cotizacion","fecha","date");
+
+  // IVA section
+  var ivaDiv = div({class:"span2",style:{borderTop:"1px solid #E2E8F0",paddingTop:"14px",marginTop:"4px"}});
+  ivaDiv.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#F59E0B",textTransform:"uppercase",letterSpacing:".05em"}}, "💰 Precios (IVA 16%)"));
+  g.appendChild(ivaDiv);
+
+  // Subtotal field
+  var sfDiv = div({});
+  sfDiv.appendChild(makeLabel("Subtotal (sin IVA) *"));
+  var subWrap = div({style:{position:"relative"}});
+  subWrap.appendChild(span({style:{position:"absolute",left:"11px",top:"50%",transform:"translateY(-50%)",color:"#64748B",fontWeight:"600"}}, "$"));
+  var subInp = inp({class:"inp",type:"number",value:String(S.form.subtotal||""),placeholder:"0.00",style:{paddingLeft:"26px"}, oninput:function(e){
+    var c = calcFromSubtotal(e.target.value);
+    S.form = Object.assign({},S.form,{subtotal:c.subtotal,iva:c.iva,total:c.total,precio:c.subtotal});
+    var ivaEl = document.getElementById("f-iva");
+    var totEl = document.getElementById("f-total");
+    if(ivaEl) ivaEl.value = c.iva;
+    if(totEl) totEl.value = c.total;
+  }});
+  subWrap.appendChild(subInp); sfDiv.appendChild(subWrap); g.appendChild(sfDiv);
+
+  // IVA field (readonly)
+  var iDiv = div({});
+  iDiv.appendChild(makeLabel("IVA (16%)"));
+  var iWrap = div({style:{position:"relative"}});
+  iWrap.appendChild(span({style:{position:"absolute",left:"11px",top:"50%",transform:"translateY(-50%)",color:"#94A3B8",fontWeight:"600"}}, "$"));
+  var ivaInp = inp({id:"f-iva",class:"inp",type:"number",value:String(S.form.iva||""),placeholder:"0.00",style:{paddingLeft:"26px",background:"#F1F5F9",color:"#94A3B8"},
+    oninput:function(e){ S.form = Object.assign({},S.form,{iva:e.target.value}); }
+  });
+  iWrap.appendChild(ivaInp); iDiv.appendChild(iWrap); g.appendChild(iDiv);
+
+  // Total field
+  var tDiv = div({});
+  tDiv.appendChild(makeLabel("Total (con IVA)"));
+  var tWrap = div({style:{position:"relative"}});
+  tWrap.appendChild(span({style:{position:"absolute",left:"11px",top:"50%",transform:"translateY(-50%)",color:"#059669",fontWeight:"700"}}, "$"));
+  var totInp = inp({id:"f-total",class:"inp",type:"number",value:String(S.form.total||""),placeholder:"0.00",style:{paddingLeft:"26px",fontWeight:"700",color:"#059669"},
+    oninput:function(e){
+      var c = calcFromTotal(e.target.value);
+      S.form = Object.assign({},S.form,{subtotal:c.subtotal,iva:c.iva,total:c.total,precio:c.subtotal});
+      subInp.value = c.subtotal;
+      var ivaEl = document.getElementById("f-iva");
+      if(ivaEl) ivaEl.value = c.iva;
+    }
+  });
+  tWrap.appendChild(totInp); tDiv.appendChild(tWrap); g.appendChild(tDiv);
+
+  // Proveedor with autocomplete
+  var pDiv = div({class:"span2"});
+  pDiv.appendChild(makeLabel("Proveedor"));
+  var pWrap = div({style:{position:"relative"}});
+  var pInp = inp({class:"inp",type:"text",value:String(S.form.proveedor||""),placeholder:"Nombre del proveedor",
+    oninput:function(e){
+      S.form = Object.assign({},S.form,{proveedor:e.target.value});
+      var q = e.target.value.toLowerCase();
+      var suggestions = getProveedores().filter(function(p){ return p.toLowerCase().startsWith(q) && p !== e.target.value; });
+      var dd = document.getElementById("prov-dd");
+      if(dd) { dd.innerHTML=""; if(suggestions.length && q.length>0){
+        suggestions.slice(0,5).forEach(function(s){
+          var opt = div({style:{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid #F1F5F9",fontSize:"13px"}}, s);
+          opt.onmousedown = opt.ontouchstart = function(ev){ ev.preventDefault(); S.form=Object.assign({},S.form,{proveedor:s}); pInp.value=s; dd.innerHTML=""; };
+          dd.appendChild(opt);
+        });
+        dd.style.display="block";
+      } else { dd.style.display="none"; }}
+    },
+    onblur:function(){ setTimeout(function(){ var dd=document.getElementById("prov-dd"); if(dd) dd.style.display="none"; },200); }
+  });
+  pWrap.appendChild(pInp);
+  var provDd = div({id:"prov-dd",style:{display:"none",position:"absolute",top:"100%",left:0,right:0,background:"white",border:"1.5px solid #BFDBFE",borderRadius:"8px",zIndex:"200",boxShadow:"0 4px 16px rgba(0,0,0,.1)",maxHeight:"180px",overflowY:"auto"}});
+  pWrap.appendChild(provDd);
+  pDiv.appendChild(pWrap); g.appendChild(pDiv);
 
   var locDiv = div({class:"span2",style:{borderTop:"1px solid #E2E8F0",paddingTop:"14px",marginTop:"4px"}});
   locDiv.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#06B6D4",textTransform:"uppercase",letterSpacing:".05em"}}, "📍 Ubicacion del costo"));
@@ -741,6 +982,48 @@ function renderForm() {
   field("Estado","estado","text",[["","Sin especificar"]].concat(ESTADOS.map(function(s){ return [s,s]; })));
   field("Ciudad","ciudad");
   field("Notas / Especificaciones tecnicas","notas","textarea",null,"span2");
+
+  // Ficha tecnica PDF
+  var fichaDiv = div({class:"span2",style:{borderTop:"1px solid #E2E8F0",paddingTop:"14px",marginTop:"4px"}});
+  fichaDiv.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#7C3AED",textTransform:"uppercase",letterSpacing:".05em"}}, "📄 Ficha Tecnica (PDF)"));
+  var fichaId = isEdit ? S.editItem.id : null;
+  var fichaActual = fichaId && fichas[fichaId];
+  if(fichaActual) {
+    var fichaInfo = div({style:{display:"flex",alignItems:"center",gap:"10px",background:"#F5F3FF",borderRadius:"8px",padding:"10px 14px",marginBottom:"10px"}});
+    fichaInfo.appendChild(span({style:{fontSize:"20px"}}, "📄"));
+    var fi = div({style:{flex:"1"}});
+    fi.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px",color:"#7C3AED"}}, fichaActual.nombre));
+    fi.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}}, "PDF guardado"));
+    fichaInfo.appendChild(fi);
+    var dlBtn = btn({style:{background:"#7C3AED",color:"white",border:"none",padding:"6px 12px",borderRadius:"7px",fontSize:"12px",fontWeight:"600"},onclick:function(){
+      var a=document.createElement("a"); a.href=fichaActual.data; a.download=fichaActual.nombre; a.click();
+    }}, "Descargar");
+    fichaInfo.appendChild(dlBtn);
+    var delFichaBtn = btn({style:{background:"#FEF2F2",color:"#EF4444",border:"none",padding:"6px 10px",borderRadius:"7px",fontSize:"12px"},onclick:function(){
+      if(fichaId){ delete fichas[fichaId]; saveFichas(fichas); } setState({view:"agregar"});
+    }}, "🗑");
+    fichaInfo.appendChild(delFichaBtn);
+    fichaDiv.appendChild(fichaInfo);
+  }
+  var fichaFileInp = inp({type:"file",accept:"application/pdf",style:{display:"none"},onchange:function(e){
+    var file = e.target.files && e.target.files[0]; if(!file) return;
+    if(file.size > 5*1024*1024){ showToast("PDF muy grande (max 5MB)","err"); return; }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var tempId = fichaId || ("temp-"+genId());
+      fichas[tempId] = {nombre:file.name, data:ev.target.result};
+      saveFichas(fichas);
+      S.form = Object.assign({},S.form,{_fichaTemp:tempId});
+      showToast("Ficha cargada ✓");
+      setState({view:"agregar"});
+    };
+    reader.readAsDataURL(file);
+  }});
+  var uploadFichaBtn = btn({style:{background:"#F5F3FF",border:"1.5px dashed #A78BFA",color:"#7C3AED",padding:"10px 16px",borderRadius:"8px",fontSize:"13px",fontWeight:"600",width:"100%"},onclick:function(){ fichaFileInp.click(); }},
+    fichaActual ? "🔄 Reemplazar PDF" : "📎 Subir ficha tecnica (PDF)");
+  fichaDiv.appendChild(uploadFichaBtn);
+  fichaDiv.appendChild(fichaFileInp);
+  g.appendChild(fichaDiv);
 
   if (isEdit) {
     var n = div({class:"span2",style:{background:"#F0FFF4",borderRadius:"8px",padding:"10px 14px",border:"1px solid #BBF7D0"}});
@@ -752,13 +1035,23 @@ function renderForm() {
   var brow = div({style:{display:"flex",gap:"10px",marginTop:"20px"}});
   brow.appendChild(btn({class:"btn-primary", onclick:function(){
     var f = S.form;
-    if (!f.nombre || !f.nombre.trim() || !f.disciplina || !f.precio) { showToast("Completa nombre, disciplina y precio","err"); return; }
+    if (!f.nombre || !f.nombre.trim() || !f.disciplina || !f.subtotal) { showToast("Completa nombre, disciplina y subtotal","err"); return; }
+    f.precio = f.subtotal;
+    var savedId;
     if (isEdit) {
-      persist(S.items.map(function(i){ return i.id === S.editItem.id ? Object.assign({},f,{id:S.editItem.id,fechaActualizacion:today()}) : i; }));
+      savedId = S.editItem.id;
+      persist(S.items.map(function(i){ return i.id === savedId ? Object.assign({},f,{id:savedId,fechaActualizacion:today()}) : i; }));
       showToast("Actualizado ✓");
     } else {
-      persist([Object.assign({},f,{id:genId(),fechaSubida:today(),fechaActualizacion:""})].concat(S.items));
+      savedId = genId();
+      persist([Object.assign({},f,{id:savedId,fechaSubida:today(),fechaActualizacion:""})].concat(S.items));
       showToast("Guardado ✓");
+    }
+    // Move temp ficha to real id
+    if(f._fichaTemp && f._fichaTemp !== savedId && fichas[f._fichaTemp]) {
+      fichas[savedId] = fichas[f._fichaTemp];
+      delete fichas[f._fichaTemp];
+      saveFichas(fichas);
     }
     setState({view:"catalogo",editItem:null,form:emptyForm()});
   }}, isEdit ? "Guardar cambios" : "Guardar material"));
@@ -1017,6 +1310,8 @@ function render() {
 }
 
 render();
+// Initialize Firebase sync
+setTimeout(initFirebase, 100);
 </script>
 
 </body>
