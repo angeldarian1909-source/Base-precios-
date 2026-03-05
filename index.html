@@ -148,7 +148,7 @@ async function extractFromFile(b64, mediaType) {
     : [{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:prompt}];
 
   // Try proxy first (Vercel), then direct
-  var useProxy = false;
+  var useProxy = true;
   
   var res;
   if (useProxy) {
