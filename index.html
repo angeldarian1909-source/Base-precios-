@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Base Precios">
+<meta name="theme-color" content="#1E293B">
+<title>Base de Precios</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#F8FAFC;color:#1E293B;min-height:100vh;}
+input,select,textarea,button{font-family:inherit;font-size:14px;outline:none;-webkit-appearance:none;}
+button{cursor:pointer;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:10px;font-weight:600;font-size:14px;color:white;z-index:999;animation:fadeUp .2s ease;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;}
+.modal{background:white;border-radius:16px;padding:26px;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.header{background:linear-gradient(135deg,#1E293B,#334155);padding:16px 16px 0;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(0,0,0,.15);}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.tabs{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tab{background:none;border:none;padding:9px 14px;font-size:12px;font-weight:600;white-space:nowrap;color:#94A3B8;border-bottom:2px solid transparent;transition:all .2s;}
+.tab.active{color:#60A5FA;border-bottom-color:#60A5FA;}
+.content{max-width:860px;margin:0 auto;padding:20px 14px;}
+.card{background:white;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+.inp{width:100%;padding:9px 11px;border-radius:8px;border:1.5px solid #E2E8F0;font-size:13px;background:#F8FAFC;color:#1E293B;}
+.inp:focus{border-color:#3B82F6;}
+.btn-primary{background:#3B82F6;color:white;border:none;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:700;}
+.btn-secondary{background:#F1F5F9;color:#64748B;border:none;padding:11px 18px;border-radius:10px;font-size:14px;}
+.btn-green{background:#10B981;color:white;border:none;padding:11px 22px;border-radius:10px;font-size:14px;font-weight:700;}
+.btn-red{background:#EF4444;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;}
+.fl{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.span2{grid-column:1/-1;}
+.item-card{background:white;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06);overflow:hidden;}
+.disc-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;}
+.age-badge{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;}
+.checkbox{width:22px;height:22px;border-radius:6px;border:2px solid #CBD5E1;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.checkbox.checked{background:#3B82F6;border-color:#3B82F6;}
+.empty{text-align:center;padding:52px 24px;color:#94A3B8;}
+.scan-drop{border:2px dashed #CBD5E1;border-radius:14px;padding:44px 24px;text-align:center;cursor:pointer;background:#F8FAFC;transition:all .2s;}
+.scan-drop:active{border-color:#3B82F6;background:#EFF6FF;}
+.sticky-bar{position:sticky;bottom:16px;background:white;border-radius:14px;padding:13px 18px;box-shadow:0 4px 24px rgba(0,0,0,.13);display:flex;align-items:center;gap:12px;margin-top:8px;}
+.cot-tab{flex:1;padding:9px 4px;border-radius:9px;border:none;font-size:12px;font-weight:700;transition:all .2s;background:transparent;color:#94A3B8;}
+.cot-tab.active{background:#1E293B;color:white;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{padding:9px 10px;font-weight:700;color:#475569;border-bottom:1px solid #E2E8F0;white-space:nowrap;text-align:right;background:#F8FAFC;}
+th:first-child{text-align:left;}
+td{padding:9px 10px;text-align:right;border-bottom:1px solid #F1F5F9;}
+td:first-child{text-align:left;font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+tr:nth-child(even) td{background:#FAFBFC;}
+tfoot td{font-weight:700;background:#F1F5F9 !important;border-top:2px solid #E2E8F0;}
+.age-chip{padding:4px 10px;border-radius:16px;border:none;font-size:11px;font-weight:600;cursor:pointer;}
+.filter-bar{background:white;border-radius:12px;padding:11px 14px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,.06);}
+.spin{display:inline-block;animation:spin 1.5s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.loc-tag{font-size:11px;color:#06B6D4;font-weight:600;}
+.date-tag{font-size:10px;color:#CBD5E1;}
+.upd-tag{font-size:10px;color:#86EFAC;}
+select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- Hidden file input always in DOM - fixes gallery on mobile -->
+
+<input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment" style="display:none">
+
+<script>
+var ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+var API_KEY = "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";
+var STORAGE_KEY = "precios_v5";
+
+var DISC = [
+  {id:"tornilleria",label:"Tornilleria / Ferreteria",color:"#F59E0B",bg:"#FEF3C7",icon:"🔩"},
+  {id:"electricidad",label:"Electricidad",color:"#3B82F6",bg:"#DBEAFE",icon:"⚡"},
+  {id:"plomeria",label:"Plomeria / Hidraulica",color:"#06B6D4",bg:"#CFFAFE",icon:"🔧"},
+  {id:"estructura",label:"Estructura / Acero",color:"#64748B",bg:"#F1F5F9",icon:"🏗️"},
+  {id:"civil",label:"Civil",color:"#92400E",bg:"#FEF3C7",icon:"🧱"},
+  {id:"tuberias",label:"Tuberias",color:"#10B981",bg:"#D1FAE5",icon:"🔄"},
+  {id:"herreria",label:"Herreria",color:"#7C3AED",bg:"#EDE9FE",icon:"⚒️"},
+  {id:"consumibles",label:"Consumibles",color:"#EC4899",bg:"#FCE7F3",icon:"📦"},
+];
+
+var ESTADOS = ["Aguascalientes","Baja California","Baja California Sur","Campeche","Chiapas","Chihuahua","Ciudad de Mexico","Coahuila","Colima","Durango","Guanajuato","Guerrero","Hidalgo","Jalisco","Mexico","Michoacan","Morelos","Nayarit","Nuevo Leon","Oaxaca","Puebla","Queretaro","Quintana Roo","San Luis Potosi","Sinaloa","Sonora","Tabasco","Tamaulipas","Tlaxcala","Veracruz","Yucatan","Zacatecas"];
+var UNIDADES = ["pza","ml","m","m2","m3","kg","ton","lt","rollo","caja","par","juego","tramo","varilla","bulto"];
+
+function genId() { return Date.now() + "-" + Math.random().toString(36).slice(2,7); }
+function today() { return new Date().toISOString().slice(0,10); }
+function fmt(v) { return Number(v).toLocaleString("es-MX",{style:"currency",currency:"MXN",minimumFractionDigits:2}); }
+function getDisc(id) { return DISC.find(function(d){ return d.id === id; }); }
+
+function getAge(subida, act) {
+  var ref = act || subida;
+  if (!ref) return {color:"#94A3B8",bg:"#F1F5F9",label:"Sin fecha",icon:"⚪",months:null};
+  var m = Math.floor((Date.now() - new Date(ref)) / (1000*60*60*24*30.44));
+  if (m < 6)  return {color:"#059669",bg:"#D1FAE5",label:m+"m",icon:"🟢",months:m};
+  if (m < 12) return {color:"#D97706",bg:"#FEF3C7",label:m+"m",icon:"🟡",months:m};
+  if (m < 18) return {color:"#EA580C",bg:"#FFEDD5",label:m+"m ⚠️",icon:"🟠",months:m};
+  return {color:"#DC2626",bg:"#FEE2E2",label:m+"m — Actualizar",icon:"🔴",months:m};
+}
+
+function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { return []; } }
+function saveItems(arr) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch(e) {} }
+
+function emptyForm() {
+  return {nombre:"",disciplina:"",subpartida:"",unidad:"pza",precio:"",proveedor:"",fecha:today(),notas:"",estado:"",ciudad:""};
+}
+
+// State
+var S = {
+  items: loadItems(),
+  view: "catalogo",
+  search: "", filterDisc: "all", filterAge: "all", sortBy: "nombre",
+  toast: null, toastTimer: null,
+  confirmDel: null,
+  editItem: null,
+  form: emptyForm(),
+  scanStep: "idle", scanPreview: null, scanResults: [], scanSel: {}, scanEdits: {}, scanErr: "", scanLoc: {estado:"",ciudad:""},
+  cotView: "select", cotItems: [], cotGroups: [{id:"g1",nombre:"Grupo 1",pct:"30"}],
+  globalPct: "30", pctMode: "global", cotNombre: "", cotCliente: "",
+  cotSearch: "", cotFilterDisc: "all",
+  quickEditId: null, quickEditVal: "",
+};
+
+function setState(patch) { Object.assign(S, patch); render(); }
+function persist(items) { S.items = items; saveItems(items); render(); }
+
+function showToast(msg, type) {
+  type = type || "ok";
+  if (S.toastTimer) clearTimeout(S.toastTimer);
+  var bg = type === "err" ? "#EF4444" : type === "info" ? "#64748B" : "#10B981";
+  S.toast = {msg: msg, bg: bg};
+  S.toastTimer = setTimeout(function(){ S.toast = null; render(); }, 3200);
+  render();
+}
+
+// API call - routes through proxy if on Vercel, direct otherwise
+async function extractFromFile(b64, mediaType) {
+  var disc = DISC.map(function(d){ return d.id; }).join(", ");
+  var prompt = "Eres un asistente especializado en construccion en Mexico. Analiza esta cotizacion y extrae TODOS los materiales con sus precios unitarios. Para cada item devuelve JSON con: nombre, disciplina (uno de: " + disc + "), subpartida, unidad, precio (numero, precio UNITARIO), proveedor, fecha (YYYY-MM-DD), notas, estado, ciudad. IMPORTANTE: extrae solo filas con descripcion y precio unitario. Ignora totales e IVA. Responde UNICAMENTE con array JSON valido. Si no hay materiales: []";
+
+  var content = mediaType.startsWith("image/")
+    ? [{type:"image",source:{type:"base64",media_type:mediaType,data:b64}},{type:"text",text:prompt}]
+    : [{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:prompt}];
+
+  // Try proxy first (Vercel), then direct
+  var useProxy = window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1" && !window.location.hostname.includes("claude");
+  
+  var res;
+  if (useProxy) {
+    res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({content: content})
+    });
+  } else {
+    res = await fetch(ANTHROPIC_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": API_KEY,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({model:"claude-opus-4-5",max_tokens:2048,messages:[{role:"user",content:content}]})
+    });
+  }
+
+  if (!res.ok) {
+    var e = await res.json().catch(function(){ return {}; });
+    throw new Error((e.error && e.error.message) || "Error " + res.status);
+  }
+  var data = await res.json();
+  var raw = (data.content || []).map(function(b){ return b.text || ""; }).join("").trim();
+  var match = raw.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error("No se encontraron materiales. Intenta con imagen mas clara.");
+  var parsed;
+  try { parsed = JSON.parse(match[0]); } catch(e) { parsed = JSON.parse(match[0].replace(/,(\s*[}\]])/g,"$1")); }
+  return parsed.map(function(x){
+    return {
+      nombre: String(x.nombre || "Sin nombre"),
+      disciplina: DISC.find(function(d){ return d.id === x.disciplina; }) ? x.disciplina : "consumibles",
+      subpartida: String(x.subpartida || ""),
+      unidad: String(x.unidad || "pza"),
+      precio: Number(String(x.precio || "0").replace(/[,$]/g,"")) || 0,
+      proveedor: String(x.proveedor || ""),
+      fecha: String(x.fecha || today()),
+      notas: String(x.notas || ""),
+      estado: String(x.estado || ""),
+      ciudad: String(x.ciudad || ""),
+    };
+  });
+}
+
+// DOM helpers
+function h(tag, attrs) {
+  var children = Array.prototype.slice.call(arguments, 2);
+  var el = document.createElement(tag);
+  if (attrs) {
+    Object.keys(attrs).forEach(function(k) {
+      var v = attrs[k];
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on")) el[k.toLowerCase()] = v;
+      else if (k === "style" && typeof v === "object") Object.assign(el.style, v);
+      else if (k === "checked" && tag === "input") el.checked = v;
+      else if (v !== null && v !== undefined && v !== false) el.setAttribute(k, v);
+    });
+  }
+  children.flat(Infinity).forEach(function(c) {
+    if (c == null || c === false) return;
+    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  });
+  return el;
+}
+function div(a) { return h.apply(null, ["div"].concat(Array.prototype.slice.call(arguments))); }
+function p(a) { return h.apply(null, ["p"].concat(Array.prototype.slice.call(arguments))); }
+function span(a) { return h.apply(null, ["span"].concat(Array.prototype.slice.call(arguments))); }
+function btn(a) { return h.apply(null, ["button"].concat(Array.prototype.slice.call(arguments))); }
+function inp(a) { return h("input", a); }
+function sel(a) { return h.apply(null, ["select"].concat(Array.prototype.slice.call(arguments))); }
+function opt(v, t, selected) { return h("option", Object.assign({value:v}, selected ? {selected:"selected"} : {}), t); }
+function ta(a) { return h.apply(null, ["textarea"].concat(Array.prototype.slice.call(arguments))); }
+function lbl(a) { return h.apply(null, ["label"].concat(Array.prototype.slice.call(arguments))); }
+
+function makeInp(attrs) { return inp(Object.assign({class:"inp"}, attrs || {})); }
+
+function makeSelect(val, options, onChange) {
+  var el = sel({class:"inp", onchange: function(e){ onChange(e.target.value); }});
+  options.forEach(function(o){ el.appendChild(opt(o[0], o[1], o[0] === val)); });
+  return el;
+}
+function makeLabel(text) { return lbl({class:"fl"}, text); }
+
+function checkbox(checked) {
+  return div({class:"checkbox" + (checked ? " checked" : "")},
+    checked ? span({style:{color:"white",fontSize:"13px",fontWeight:"700",lineHeight:"1"}}, "✓") : ""
+  );
+}
+
+function ageBadge(item) {
+  var age = getAge(item.fechaSubida, item.fechaActualizacion);
+  return span({class:"age-badge",style:{background:age.bg,color:age.color}}, age.icon + " " + age.label);
+}
+
+function discBadge(d) {
+  return d ? span({class:"disc-badge",style:{background:d.bg,color:d.color}}, d.label) : span({}, "");
+}
+
+function score(item, q) {
+  if (!q) return 1;
+  var ql = q.toLowerCase();
+  var s = 0;
+  if (item.nombre.toLowerCase().startsWith(ql)) s += 10;
+  else if (item.nombre.toLowerCase().includes(ql)) s += 6;
+  if ((item.subpartida || "").toLowerCase().includes(ql)) s += 4;
+  if ((item.proveedor || "").toLowerCase().includes(ql)) s += 2;
+  if ((item.estado || "").toLowerCase().includes(ql)) s += 2;
+  if ((item.ciudad || "").toLowerCase().includes(ql)) s += 2;
+  if ((item.notas || "").toLowerCase().includes(ql)) s += 1;
+  var d = DISC.find(function(x){ return x.id === item.disciplina; });
+  if (d && d.label.toLowerCase().includes(ql)) s += 3;
+  return s;
+}
+
+function ageFilter(item) {
+  if (S.filterAge === "all") return true;
+  var a = getAge(item.fechaSubida, item.fechaActualizacion);
+  if (S.filterAge === "verde")    return a.months !== null && a.months < 6;
+  if (S.filterAge === "amarillo") return a.months !== null && a.months >= 6 && a.months < 12;
+  if (S.filterAge === "naranja")  return a.months !== null && a.months >= 12 && a.months < 18;
+  if (S.filterAge === "rojo")     return a.months !== null && a.months >= 18;
+  return true;
+}
+
+function getFiltered() {
+  return S.items
+    .filter(function(i){ return S.filterDisc === "all" || i.disciplina === S.filterDisc; })
+    .filter(ageFilter)
+    .filter(function(i){ return !S.search || score(i, S.search) > 0; })
+    .sort(function(a, b){
+      if (S.search) return score(b, S.search) - score(a, S.search);
+      if (S.sortBy === "precio") return Number(a.precio) - Number(b.precio);
+      if (S.sortBy === "precioDesc") return Number(b.precio) - Number(a.precio);
+      if (S.sortBy === "fecha") return (b.fechaSubida || "").localeCompare(a.fechaSubida || "");
+      if (S.sortBy === "antiguedad") return (a.fechaActualizacion || a.fechaSubida || "").localeCompare(b.fechaActualizacion || b.fechaSubida || "");
+      return a.nombre.localeCompare(b.nombre);
+    });
+}
+
+function exportCSV() {
+  if (!S.items.length) { showToast("No hay materiales", "err"); return; }
+  var headers = ["Nombre","Disciplina","Sub-Partida","Unidad","Precio","Proveedor","Estado","Ciudad","F.Cotizacion","F.Subida","F.Actualizacion","Notas"];
+  var rows = S.items.map(function(i){
+    return [i.nombre, (getDisc(i.disciplina) && getDisc(i.disciplina).label) || i.disciplina, i.subpartida||"", i.unidad, Number(i.precio).toFixed(2), i.proveedor||"", i.estado||"", i.ciudad||"", i.fecha||"", i.fechaSubida||"", i.fechaActualizacion||"", i.notas||""];
+  });
+  var csv = [headers].concat(rows).map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(","); }).join("\n");
+  var a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv);
+  a.download = "Precios_" + today() + ".csv";
+  a.click();
+  showToast("Exportado ✓");
+}
+
+function getEffPct(ci) {
+  if (S.pctMode === "global") return Number(S.globalPct) || 0;
+  if (S.pctMode === "individual") return Number(ci.pct) || 0;
+  var g = S.cotGroups.find(function(g){ return g.id === ci.groupId; });
+  return Number(g && g.pct) || 0;
+}
+
+function getResumenRows() {
+  return S.cotItems.map(function(ci){
+    var item = S.items.find(function(i){ return i.id === ci.itemId; });
+    if (!item) return null;
+    var cant = Number(ci.cantidad) || 1;
+    var pct = getEffPct(ci);
+    var precioU = Number(item.precio) || 0;
+    var subtot = precioU * cant;
+    var utilU = precioU * (pct / 100);
+    var totalU = precioU + utilU;
+    var utilTot = utilU * cant;
+    var totalTot = totalU * cant;
+    return {item:item,ci:ci,cant:cant,pct:pct,precioU:precioU,subtot:subtot,utilU:utilU,totalU:totalU,utilTot:utilTot,totalTot:totalTot};
+  }).filter(Boolean);
+}
+
+function exportCotCSV() {
+  var rows = getResumenRows();
+  var grandSub = rows.reduce(function(s,r){ return s+r.subtot; }, 0);
+  var grandUtil = rows.reduce(function(s,r){ return s+r.utilTot; }, 0);
+  var grandTotal = rows.reduce(function(s,r){ return s+r.totalTot; }, 0);
+  var headers = ["#","Material","Disciplina","Unidad","Cant.","P.Costo","Subtotal","% Util.","Utilidad","P.Venta","Total"];
+  var data = rows.map(function(r, i){
+    return [i+1, r.item.nombre, (getDisc(r.item.disciplina) && getDisc(r.item.disciplina).label) || r.item.disciplina, r.item.unidad, r.cant, r.precioU.toFixed(2), r.subtot.toFixed(2), r.pct+"%", r.utilTot.toFixed(2), r.totalU.toFixed(2), r.totalTot.toFixed(2)];
+  });
+  data.push([]);
+  data.push(["","","","","","SUBTOTAL",grandSub.toFixed(2),"","UTILIDAD","TOTAL VENTA",grandTotal.toFixed(2)]);
+  var csv = [headers].concat(data).map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(","); }).join("\n");
+  var a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv);
+  a.download = "Cotizacion_" + (S.cotNombre || "Nueva") + "_" + today() + ".csv";
+  a.click();
+  showToast("Cotizacion exportada ✓");
+}
+
+// ── Setup file input (always in DOM, fixes iOS gallery) ──
+var fileInputEl = document.getElementById("fileInput");
+fileInputEl.addEventListener("change", async function(e) {
+  var file = e.target.files && e.target.files[0];
+  if (!file) return;
+  e.target.value = "";
+  var isImg = file.type.startsWith("image/");
+  var isPdf = file.type === "application/pdf";
+  if (!isImg && !isPdf) { setState({scanErr:"Solo imagenes o PDF."}); return; }
+  setState({scanStep:"scanning", scanErr:"", scanResults:[], scanSel:{}, scanEdits:{}, scanPreview: isImg ? URL.createObjectURL(file) : null});
+  try {
+    var b64 = await new Promise(function(res, rej) {
+      var r = new FileReader();
+      r.onload = function(){ res(r.result.split(",")[1]); };
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    var extracted = await extractFromFile(b64, file.type);
+    if (!extracted.length) { setState({scanStep:"idle", scanErr:"No encontre materiales. Intenta con imagen mas clara."}); return; }
+    var tagged = extracted.map(function(x){
+      return Object.assign({}, x, {_id:genId(), estado:x.estado||S.scanLoc.estado, ciudad:x.ciudad||S.scanLoc.ciudad});
+    });
+    var selMap = {};
+    tagged.forEach(function(t){ selMap[t._id] = true; });
+    setState({scanStep:"review", scanResults:tagged, scanSel:selMap, scanEdits:{}});
+  } catch(err) {
+    setState({scanStep:"idle", scanErr: (err && err.message) || "Error al procesar."});
+  }
+});
+
+// ══════════════════════════════
+// RENDER SECTIONS
+// ══════════════════════════════
+
+function renderItemCard(item) {
+  var d = getDisc(item.disciplina);
+  var age = getAge(item.fechaSubida, item.fechaActualizacion);
+  var isOld = (age.months || 0) >= 12;
+  var card = div({class:"item-card", style:{border:"1.5px solid " + (isOld ? "#FECACA" : "#F1F5F9")}});
+
+  var main = div({style:{padding:"14px 16px",display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap"}});
+  if (d) main.appendChild(div({style:{width:"42px",height:"42px",borderRadius:"10px",background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:"0"}}, d.icon));
+
+  var info = div({style:{flex:"1",minWidth:"160px"}});
+  info.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px",color:"#1E293B"}}, item.nombre));
+
+  var tags = div({style:{display:"flex",gap:"6px",marginTop:"3px",flexWrap:"wrap",alignItems:"center"}});
+  if (d) tags.appendChild(discBadge(d));
+  if (item.subpartida) tags.appendChild(span({style:{fontSize:"11px",color:"#64748B"}}, "· " + item.subpartida));
+  if (item.proveedor) tags.appendChild(span({style:{fontSize:"11px",color:"#94A3B8"}}, "· " + item.proveedor));
+  info.appendChild(tags);
+
+  var tags2 = div({style:{display:"flex",gap:"8px",marginTop:"4px",flexWrap:"wrap",alignItems:"center"}});
+  var loc = [item.ciudad, item.estado].filter(Boolean).join(", ");
+  if (loc) tags2.appendChild(span({class:"loc-tag"}, "📍 " + loc));
+  tags2.appendChild(ageBadge(item));
+  if (item.fechaSubida) tags2.appendChild(span({class:"date-tag"}, "Subido: " + item.fechaSubida));
+  if (item.fechaActualizacion) tags2.appendChild(span({class:"upd-tag"}, "Actualizado: " + item.fechaActualizacion));
+  info.appendChild(tags2);
+  if (item.notas) info.appendChild(p({style:{margin:"3px 0 0",fontSize:"12px",color:"#94A3B8"}}, item.notas));
+  main.appendChild(info);
+
+  var priceDiv = div({style:{textAlign:"right",flexShrink:"0"}});
+  priceDiv.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"17px"}}, fmt(item.precio)));
+  priceDiv.appendChild(p({style:{margin:"1px 0 0",fontSize:"12px",color:"#94A3B8"}}, "por " + item.unidad));
+  main.appendChild(priceDiv);
+
+  var actions = div({style:{display:"flex",gap:"6px",flexShrink:"0"}});
+  var qBtn = btn({style:{background:isOld?"#FEF2F2":"#F1F5F9",border:"none",color:isOld?"#EF4444":"#64748B",width:"34px",height:"34px",borderRadius:"8px",fontSize:"15px",display:"flex",alignItems:"center",justifyContent:"center"},
+    onclick: function(){ setState({quickEditId:item.id, quickEditVal:item.precio}); }
+  }, "💲");
+  var eBtn = btn({style:{background:"#EFF6FF",border:"none",color:"#3B82F6",width:"34px",height:"34px",borderRadius:"8px",fontSize:"15px",display:"flex",alignItems:"center",justifyContent:"center"},
+    onclick: function(){ setState({view:"agregar", editItem:item, form:Object.assign({},item)}); }
+  }, "✏️");
+  var dBtn = btn({style:{background:"#FEF2F2",border:"none",color:"#EF4444",width:"34px",height:"34px",borderRadius:"8px",fontSize:"15px",display:"flex",alignItems:"center",justifyContent:"center"},
+    onclick: function(){ setState({confirmDel:item.id}); }
+  }, "🗑️");
+  actions.appendChild(qBtn); actions.appendChild(eBtn); actions.appendChild(dBtn);
+  main.appendChild(actions);
+  card.appendChild(main);
+
+  if (S.quickEditId === item.id) {
+    var panel = div({style:{padding:"12px 16px",borderTop:"2px solid "+age.bg,background:age.bg,display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}});
+    panel.appendChild(span({style:{fontSize:"18px"}}, age.icon));
+    var pInfo = div({style:{flex:"1"}});
+    pInfo.appendChild(p({style:{margin:"0 0 2px",fontSize:"12px",fontWeight:"700",color:age.color}}, "Actualizar precio"));
+    pInfo.appendChild(p({style:{margin:0,fontSize:"11px",color:"#64748B"}}, "Actual: " + fmt(item.precio) + " · Fecha: " + today()));
+    panel.appendChild(pInfo);
+    var row = div({style:{display:"flex",alignItems:"center",gap:"8px",flexShrink:"0"}});
+    row.appendChild(span({style:{fontWeight:"600",color:"#64748B"}}, "$"));
+    var pi = inp({type:"number",min:"0",step:"0.01",value:S.quickEditVal,class:"inp",style:{width:"110px",fontWeight:"700"},oninput:function(e){ S.quickEditVal = e.target.value; }});
+    row.appendChild(pi);
+    row.appendChild(btn({class:"btn-green",style:{padding:"8px 16px",fontSize:"13px"}, onclick:function(){
+      var nv = S.quickEditVal;
+      if (!nv || isNaN(Number(nv))) { showToast("Precio invalido","err"); return; }
+      persist(S.items.map(function(i){ return i.id === item.id ? Object.assign({},i,{precio:String(nv),fechaActualizacion:today()}) : i; }));
+      setState({quickEditId:null});
+      showToast("Precio actualizado ✓");
+    }}, "✓"));
+    row.appendChild(btn({style:{background:"none",border:"none",color:"#94A3B8",fontSize:"20px",padding:"0 4px"}, onclick:function(){ setState({quickEditId:null}); }}, "x"));
+    panel.appendChild(row);
+    card.appendChild(panel);
+  }
+  return card;
+}
+
+function renderCatalogo() {
+  var items = S.items;
+  var alertCount = items.filter(function(i){ return (getAge(i.fechaSubida,i.fechaActualizacion).months || 0) >= 12; }).length;
+  var filtered = getFiltered();
+  var wrap = div({});
+
+  if (alertCount > 0) {
+    var banner = div({style:{background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"12px",padding:"12px 16px",marginBottom:"14px",display:"flex",alignItems:"center",gap:"10px"}});
+    banner.appendChild(span({style:{fontSize:"20px"}}, "🔴"));
+    var bt = div({style:{flex:"1"}});
+    bt.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px",color:"#DC2626"}}, alertCount + " precio" + (alertCount > 1 ? "s" : "") + " con mas de 12 meses sin actualizar"));
+    bt.appendChild(p({style:{margin:0,fontSize:"12px",color:"#EF4444"}}, "Filtra por Naranja o Rojo para verlos"));
+    banner.appendChild(bt);
+    banner.appendChild(btn({style:{background:"#DC2626",color:"white",border:"none",padding:"6px 12px",borderRadius:"7px",fontSize:"12px",fontWeight:"600"}, onclick:function(){ setState({filterAge:"rojo"}); }}, "Ver"));
+    wrap.appendChild(banner);
+  }
+
+  var fb = div({class:"filter-bar"});
+  var row1 = div({style:{display:"flex",gap:"8px",flexWrap:"wrap",alignItems:"center",marginBottom:"10px"}});
+  var si = inp({type:"text",class:"inp",placeholder:"🔍 Buscar material, ciudad...",value:S.search,style:{flex:"1 1 160px",minWidth:"140px"}, oninput:function(e){ setState({search:e.target.value}); }});
+  row1.appendChild(si);
+  var discSel = makeSelect(S.filterDisc, [["all","Todas las disciplinas"]].concat(DISC.map(function(d){ return [d.id, d.icon+" "+d.label]; })), function(v){ setState({filterDisc:v}); });
+  discSel.style.flex = "1 1 120px"; row1.appendChild(discSel);
+  var sortSel = makeSelect(S.sortBy, [["nombre","A-Z"],["precio","Precio ↑"],["precioDesc","Precio ↓"],["fecha","Mas reciente"],["antiguedad","Mas antiguo"]], function(v){ setState({sortBy:v}); });
+  sortSel.style.flex = "1 1 100px"; row1.appendChild(sortSel);
+  fb.appendChild(row1);
+
+  var row2 = div({style:{display:"flex",gap:"6px",flexWrap:"wrap",alignItems:"center"}});
+  row2.appendChild(span({style:{fontSize:"11px",color:"#94A3B8",marginRight:"4px"}}, "Antiguedad:"));
+  [["all","Todos","#475569","#F1F5F9"],["verde","🟢 <6m","#059669","#D1FAE5"],["amarillo","🟡 6-12m","#D97706","#FEF3C7"],["naranja","🟠 12-18m","#EA580C","#FFEDD5"],["rojo","🔴 +18m","#DC2626","#FEE2E2"]].forEach(function(x){
+    var id=x[0],label=x[1],color=x[2],bg=x[3];
+    var active = S.filterAge === id;
+    row2.appendChild(btn({class:"age-chip",style:{background:active?color:bg,color:active?"white":color}, onclick:function(){ setState({filterAge:id}); }}, label));
+  });
+  fb.appendChild(row2);
+  wrap.appendChild(fb);
+
+  if (!items.length) {
+    var e = div({class:"empty"});
+    e.appendChild(div({style:{fontSize:"52px",marginBottom:"14px"}}, "📋"));
+    e.appendChild(p({style:{fontWeight:"700",fontSize:"17px",color:"#475569",marginBottom:"6px"}}, "Base de datos vacia"));
+    e.appendChild(p({style:{fontSize:"13px",marginBottom:"18px"}}, "Agrega materiales manualmente o escanea una cotizacion"));
+    e.appendChild(btn({class:"btn-primary", onclick:function(){ setState({view:"agregar",editItem:null,form:emptyForm()}); }}, "+ Agregar primer material"));
+    wrap.appendChild(e); return wrap;
+  }
+  if (!filtered.length) {
+    var e2 = div({class:"empty"});
+    e2.appendChild(div({style:{fontSize:"52px",marginBottom:"14px"}}, "🔎"));
+    e2.appendChild(p({style:{fontWeight:"700",fontSize:"17px",color:"#475569",marginBottom:"18px"}}, "Sin resultados"));
+    e2.appendChild(btn({class:"btn-primary", onclick:function(){ setState({search:"",filterDisc:"all",filterAge:"all"}); }}, "Limpiar filtros"));
+    wrap.appendChild(e2); return wrap;
+  }
+  wrap.appendChild(p({style:{color:"#64748B",fontSize:"13px",margin:"0 0 10px"}}, filtered.length + " de " + items.length + " materiales"));
+  filtered.forEach(function(item){ wrap.appendChild(renderItemCard(item)); });
+  return wrap;
+}
+
+function renderBusqueda() {
+  var filtered = getFiltered();
+  var wrap = div({});
+  var box = div({style:{background:"white",borderRadius:"16px",padding:"20px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"16px"}});
+  box.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}}, "🔍 Busqueda de Materiales"));
+  var si = inp({type:"text",class:"inp",placeholder:"Nombre, partida, proveedor, estado, ciudad...",value:S.search,style:{fontSize:"16px",marginBottom:"14px"}, oninput:function(e){ setState({search:e.target.value,view:"buscar"}); }});
+  box.appendChild(si);
+  var chips = div({style:{display:"flex",flexWrap:"wrap",gap:"7px"}});
+  var discOpts = [["all","Todas ("+S.items.length+")","#1E293B","#F1F5F9"]].concat(
+    DISC.filter(function(d){ return S.items.some(function(i){ return i.disciplina === d.id; }); })
+      .map(function(d){ return [d.id, d.icon+" "+d.label.split("/")[0].trim()+" ("+S.items.filter(function(i){ return i.disciplina === d.id; }).length+")", d.color, d.bg]; })
+  );
+  discOpts.forEach(function(x){
+    var id=x[0],label=x[1],color=x[2],bg=x[3];
+    var active = S.filterDisc === id;
+    chips.appendChild(btn({style:{padding:"5px 12px",borderRadius:"20px",border:"none",fontSize:"12px",fontWeight:"600",background:active?color:bg,color:active?"white":color}, onclick:function(){ setState({filterDisc:id,view:"buscar"}); }}, label));
+  });
+  box.appendChild(chips);
+  wrap.appendChild(box);
+
+  if (!S.search && S.filterDisc === "all") {
+    var e = div({style:{textAlign:"center",padding:"52px 24px",color:"#94A3B8"}});
+    e.appendChild(div({style:{fontSize:"52px",marginBottom:"14px"}}, "🔍"));
+    e.appendChild(p({style:{fontWeight:"600",fontSize:"15px",color:"#475569",margin:"0 0 6px"}}, "Escribe para buscar"));
+    e.appendChild(p({style:{fontSize:"13px",margin:"0 0 20px"}}, "Por nombre, partida, proveedor, estado o ciudad"));
+    var sugs = div({style:{display:"flex",justifyContent:"center",gap:"7px",flexWrap:"wrap"}});
+    ["tornillo","cable","tubo","varilla","Monterrey","Jalisco"].forEach(function(t){
+      sugs.appendChild(btn({style:{padding:"6px 14px",borderRadius:"20px",background:"#F1F5F9",border:"1px solid #E2E8F0",fontSize:"12px",color:"#475569"}, onclick:function(){ setState({search:t,view:"buscar"}); }}, t));
+    });
+    e.appendChild(sugs); wrap.appendChild(e); return wrap;
+  }
+  if (!filtered.length) {
+    var e2 = div({class:"empty"});
+    e2.appendChild(div({style:{fontSize:"52px",marginBottom:"14px"}}, "🔎"));
+    e2.appendChild(p({style:{fontWeight:"700",fontSize:"17px",color:"#475569",marginBottom:"18px"}}, "Sin resultados"));
+    e2.appendChild(btn({class:"btn-primary", onclick:function(){ setState({search:"",filterDisc:"all"}); }}, "Limpiar"));
+    wrap.appendChild(e2); return wrap;
+  }
+  wrap.appendChild(p({style:{color:"#64748B",fontSize:"13px",margin:"0 0 10px"}}, filtered.length + " resultado" + (filtered.length !== 1 ? "s" : "") + (S.search ? ' para "' + S.search + '"' : "")));
+  filtered.forEach(function(item){ wrap.appendChild(renderItemCard(item)); });
+  return wrap;
+}
+
+function renderEscanear() {
+  var wrap = div({});
+
+  if (S.scanStep === "idle") {
+    var box = div({style:{background:"white",borderRadius:"14px",padding:"18px",boxShadow:"0 1px 8px rgba(0,0,0,.07)"}});
+    box.appendChild(h("h2",{style:{margin:"0 0 6px",fontSize:"17px"}}, "📷 Escanear Cotizacion"));
+    box.appendChild(p({style:{margin:"0 0 16px",color:"#64748B",fontSize:"13px"}}, "Sube una foto o PDF y la IA extrae los materiales y precios automaticamente."));
+
+    var locBox = div({style:{background:"#F8FAFC",borderRadius:"10px",padding:"14px 16px",marginBottom:"16px",border:"1.5px solid #E2E8F0"}});
+    locBox.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}}, "📍 Ubicacion del documento (opcional)"));
+    var locGrid = div({class:"grid2"});
+    var lEstado = div({});
+    lEstado.appendChild(makeLabel("Estado"));
+    var esSel = makeSelect(S.scanLoc.estado, [["","Sin especificar"]].concat(ESTADOS.map(function(s){ return [s,s]; })), function(v){ S.scanLoc = Object.assign({},S.scanLoc,{estado:v}); });
+    lEstado.appendChild(esSel); locGrid.appendChild(lEstado);
+    var lCiudad = div({});
+    lCiudad.appendChild(makeLabel("Ciudad"));
+    var ciInp = inp({class:"inp",type:"text",placeholder:"Ej: Monterrey",value:S.scanLoc.ciudad, oninput:function(e){ S.scanLoc = Object.assign({},S.scanLoc,{ciudad:e.target.value}); }});
+    lCiudad.appendChild(ciInp); locGrid.appendChild(lCiudad);
+    locBox.appendChild(locGrid); box.appendChild(locBox);
+
+    // Drop zone triggers shared file input
+    var drop = div({class:"scan-drop", onclick:function(){ fileInputEl.click(); }});
+    drop.appendChild(div({style:{fontSize:"52px",marginBottom:"12px"}}, "📄"));
+    drop.appendChild(p({style:{fontWeight:"700",color:"#334155",fontSize:"16px",marginBottom:"6px"}}, "Toca para subir archivo"));
+    drop.appendChild(p({style:{color:"#94A3B8",fontSize:"13px"}}, "JPG, PNG o PDF · Camara o Galeria"));
+    box.appendChild(drop);
+
+    // Also offer gallery-specific button for iOS
+    var galBtn = btn({style:{display:"block",width:"100%",marginTop:"10px",background:"#F1F5F9",border:"1.5px solid #E2E8F0",color:"#475569",padding:"11px",borderRadius:"10px",fontSize:"13px",fontWeight:"600"},
+      onclick:function(){
+        fileInputEl.removeAttribute("capture");
+        fileInputEl.click();
+        setTimeout(function(){ fileInputEl.setAttribute("capture","environment"); }, 500);
+      }
+    }, "🖼️ Elegir desde galeria");
+    box.appendChild(galBtn);
+
+    if (S.scanErr) box.appendChild(div({style:{marginTop:"14px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"10px",padding:"12px 16px",color:"#DC2626",fontSize:"13px"}}, "⚠️ " + S.scanErr));
+    wrap.appendChild(box);
+  }
+  else if (S.scanStep === "scanning") {
+    var box2 = div({style:{background:"white",borderRadius:"16px",padding:"48px",textAlign:"center",boxShadow:"0 1px 8px rgba(0,0,0,.07)"}});
+    box2.appendChild(div({style:{fontSize:"52px",marginBottom:"16px"}}, span({class:"spin"}, "⚙️")));
+    box2.appendChild(h("h3",{style:{margin:"0 0 8px"}}, "Analizando cotizacion..."));
+    box2.appendChild(p({style:{margin:0,color:"#64748B",fontSize:"13px"}}, "La IA esta extrayendo materiales y precios"));
+    wrap.appendChild(box2);
+  }
+  else if (S.scanStep === "review") {
+    if (S.scanPreview) {
+      var pv = div({style:{background:"white",borderRadius:"12px",padding:"12px",marginBottom:"14px",boxShadow:"0 1px 6px rgba(0,0,0,.06)"}});
+      pv.appendChild(h("img",{src:S.scanPreview,alt:"Cotizacion",style:{width:"100%",maxHeight:"200px",objectFit:"contain",borderRadius:"8px",border:"1px solid #E2E8F0"}}));
+      wrap.appendChild(pv);
+    }
+    var selCount = Object.values(S.scanSel).filter(Boolean).length;
+    var header = div({style:{background:"white",borderRadius:"16px",padding:"20px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px"}});
+    var htop = div({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"}});
+    htop.appendChild(h("h2",{style:{margin:0,fontSize:"16px"}}, "✅ " + S.scanResults.length + " materiales encontrados"));
+    htop.appendChild(span({style:{fontSize:"12px",color:"#64748B"}}, selCount + " seleccionados"));
+    header.appendChild(htop);
+    header.appendChild(p({style:{margin:"0 0 12px",fontSize:"13px",color:"#64748B"}}, "Revisa y edita cada articulo antes de guardar."));
+    var hbts = div({style:{display:"flex",gap:"8px",flexWrap:"wrap"}});
+    hbts.appendChild(btn({style:{background:"#EFF6FF",border:"none",color:"#3B82F6",padding:"6px 12px",borderRadius:"7px",fontSize:"12px",fontWeight:"600"}, onclick:function(){
+      var s = {}; S.scanResults.forEach(function(r){ s[r._id] = true; }); setState({scanSel:s});
+    }}, "✓ Todos"));
+    hbts.appendChild(btn({style:{background:"#F1F5F9",border:"none",color:"#64748B",padding:"6px 12px",borderRadius:"7px",fontSize:"12px"}, onclick:function(){ setState({scanSel:{}}); }}, "Ninguno"));
+    hbts.appendChild(btn({style:{background:"#F1F5F9",border:"none",color:"#64748B",padding:"6px 12px",borderRadius:"7px",fontSize:"12px",marginLeft:"auto"}, onclick:function(){ setState({scanStep:"idle",scanResults:[],scanPreview:null}); }}, "↩ Nuevo archivo"));
+    header.appendChild(hbts);
+    wrap.appendChild(header);
+
+    S.scanResults.forEach(function(raw){
+      var item = Object.assign({}, raw, S.scanEdits[raw._id] || {});
+      var d = getDisc(item.disciplina);
+      var isSel = !!S.scanSel[raw._id];
+      var card = div({style:{background:"white",borderRadius:"12px",marginBottom:"10px",boxShadow:"0 1px 6px rgba(0,0,0,.06)",overflow:"hidden",border:"2px solid "+(isSel?"#3B82F6":"#E2E8F0")}});
+      var top = div({style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px",cursor:"pointer",background:isSel?"#EFF6FF":"white"}, onclick:function(){
+        var s = Object.assign({},S.scanSel); s[raw._id] = !s[raw._id]; setState({scanSel:s});
+      }});
+      top.appendChild(checkbox(isSel));
+      if (d) top.appendChild(div({style:{width:"36px",height:"36px",borderRadius:"8px",background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:"0"}}, d.icon));
+      var iInfo = div({style:{flex:"1",minWidth:"0"}});
+      iInfo.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}, item.nombre));
+      var itags = div({style:{display:"flex",gap:"5px",marginTop:"2px",flexWrap:"wrap"}});
+      if (d) itags.appendChild(discBadge(d));
+      var loc = [item.ciudad,item.estado].filter(Boolean).join(", ");
+      if (loc) itags.appendChild(span({style:{fontSize:"11px",color:"#06B6D4"}}, "· " + loc));
+      iInfo.appendChild(itags); top.appendChild(iInfo);
+      var iPrice = div({style:{textAlign:"right",flexShrink:"0"}});
+      iPrice.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"15px"}}, fmt(item.precio)));
+      iPrice.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}}, "/" + item.unidad));
+      top.appendChild(iPrice); card.appendChild(top);
+
+      if (isSel) {
+        var edit = div({style:{padding:"14px 16px",borderTop:"1px solid #DBEAFE",background:"#F8FBFF"}});
+        edit.appendChild(p({style:{margin:"0 0 10px",fontSize:"11px",fontWeight:"700",color:"#3B82F6",textTransform:"uppercase"}}, "✏️ Editar antes de guardar"));
+        var g = div({class:"grid2"});
+        function addField(label, field, type, options, span2) {
+          var fd = div({class: span2 ? "span2" : ""});
+          fd.appendChild(lbl({style:{display:"block",fontSize:"10px",fontWeight:"700",color:"#94A3B8",marginBottom:"4px",textTransform:"uppercase"}}, label));
+          if (options) {
+            var s = makeSelect(item[field] || "", options, function(v){ var ed = Object.assign({},S.scanEdits); ed[raw._id] = Object.assign({},ed[raw._id]); ed[raw._id][field] = v; setState({scanEdits:ed}); });
+            s.style.borderColor = "#BFDBFE"; fd.appendChild(s);
+          } else {
+            var i = inp({class:"inp",type:type||"text",value:String(item[field]||""),style:Object.assign({borderColor:"#BFDBFE"},field==="precio"?{fontWeight:"700"}:{}), oninput:function(e){ var ed = Object.assign({},S.scanEdits); ed[raw._id] = Object.assign({},ed[raw._id]); ed[raw._id][field] = e.target.value; S.scanEdits = ed; }});
+            fd.appendChild(i);
+          }
+          g.appendChild(fd);
+        }
+        addField("Nombre","nombre","text",null,true);
+        addField("Precio ($)","precio","number");
+        addField("Unidad","unidad","text",UNIDADES.map(function(u){ return [u,u]; }));
+        addField("Disciplina","disciplina","text",DISC.map(function(d){ return [d.id, d.icon+" "+d.label]; }));
+        addField("Sub-Partida","subpartida");
+        addField("Proveedor","proveedor");
+        addField("Estado","estado","text",[["","Sin especificar"]].concat(ESTADOS.map(function(s){ return [s,s]; })));
+        addField("Ciudad","ciudad");
+        addField("Notas","notas","text",null,true);
+        edit.appendChild(g); card.appendChild(edit);
+      }
+      wrap.appendChild(card);
+    });
+
+    var bar = div({class:"sticky-bar"});
+    var bInfo = div({style:{flex:"1"}});
+    bInfo.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px"}}, selCount + " materiales seleccionados"));
+    bInfo.appendChild(p({style:{margin:0,fontSize:"12px",color:"#64748B"}}, "Se agregaran a la base de datos"));
+    bar.appendChild(bInfo);
+    bar.appendChild(btn({class:"btn-green", onclick:function(){
+      var toSave = S.scanResults.filter(function(r){ return S.scanSel[r._id]; }).map(function(r){
+        var merged = Object.assign({}, r, S.scanEdits[r._id] || {});
+        delete merged._id;
+        return Object.assign({}, merged, {precio:String(merged.precio||0), id:genId(), fechaSubida:today(), fechaActualizacion:""});
+      });
+      if (!toSave.length) { showToast("Selecciona al menos uno","err"); return; }
+      persist(toSave.concat(S.items));
+      setState({scanStep:"idle",scanResults:[],scanPreview:null,scanSel:{},scanEdits:{},scanErr:"",scanLoc:{estado:"",ciudad:""}});
+      showToast(toSave.length + " material" + (toSave.length > 1 ? "es" : "") + " guardado" + (toSave.length > 1 ? "s" : "") + " ✓");
+      setState({view:"catalogo"});
+    }}, "Guardar ✓"));
+    wrap.appendChild(bar);
+  }
+  return wrap;
+}
+
+function renderForm() {
+  var isEdit = !!S.editItem;
+  var wrap = div({style:{background:"white",borderRadius:"16px",padding:"24px",boxShadow:"0 1px 8px rgba(0,0,0,.07)"}});
+  wrap.appendChild(h("h2",{style:{margin:"0 0 20px",fontSize:"17px"}}, isEdit ? "✏️ Editar Material" : "➕ Nuevo Material"));
+  var g = div({class:"grid2"});
+
+  function field(label, key, type, options, cls) {
+    type = type || "text"; cls = cls || "";
+    var fd = div({class:cls});
+    fd.appendChild(makeLabel(label));
+    if (options) {
+      var s = makeSelect(S.form[key] || "", options, function(v){ S.form = Object.assign({},S.form); S.form[key] = v; });
+      fd.appendChild(s);
+    } else if (type === "textarea") {
+      var t = ta({class:"inp",rows:"3",style:{resize:"vertical",lineHeight:"1.5"}, oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }}, S.form[key] || "");
+      fd.appendChild(t);
+    } else {
+      if (key === "precio") {
+        var w = div({style:{position:"relative"}});
+        w.appendChild(span({style:{position:"absolute",left:"11px",top:"50%",transform:"translateY(-50%)",color:"#64748B",fontWeight:"600"}}, "$"));
+        var i = inp({class:"inp",type:type,value:String(S.form[key]||""),placeholder:"0.00",style:{paddingLeft:"26px"}, oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }});
+        w.appendChild(i); fd.appendChild(w);
+      } else {
+        var i2 = inp({class:"inp",type:type,value:String(S.form[key]||""), oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }});
+        fd.appendChild(i2);
+      }
+    }
+    g.appendChild(fd);
+  }
+
+  field("Nombre / Nombre comercial *","nombre","text",null,"span2");
+  field("Disciplina *","disciplina","text",[["","Seleccionar..."]].concat(DISC.map(function(d){ return [d.id, d.icon+" "+d.label]; })));
+  field("Sub-Partida","subpartida");
+  field("Precio unitario *","precio","number");
+  field("Unidad","unidad","text",UNIDADES.map(function(u){ return [u,u]; }));
+  field("Proveedor","proveedor");
+  field("Fecha de cotizacion","fecha","date");
+
+  var locDiv = div({class:"span2",style:{borderTop:"1px solid #E2E8F0",paddingTop:"14px",marginTop:"4px"}});
+  locDiv.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#06B6D4",textTransform:"uppercase",letterSpacing:".05em"}}, "📍 Ubicacion del costo"));
+  g.appendChild(locDiv);
+  field("Estado","estado","text",[["","Sin especificar"]].concat(ESTADOS.map(function(s){ return [s,s]; })));
+  field("Ciudad","ciudad");
+  field("Notas / Especificaciones tecnicas","notas","textarea",null,"span2");
+
+  if (isEdit) {
+    var n = div({class:"span2",style:{background:"#F0FFF4",borderRadius:"8px",padding:"10px 14px",border:"1px solid #BBF7D0"}});
+    n.appendChild(p({style:{margin:0,fontSize:"12px",color:"#059669"}}, "🕐 Se registrara la fecha de actualizacion: " + today()));
+    g.appendChild(n);
+  }
+  wrap.appendChild(g);
+
+  var brow = div({style:{display:"flex",gap:"10px",marginTop:"20px"}});
+  brow.appendChild(btn({class:"btn-primary", onclick:function(){
+    var f = S.form;
+    if (!f.nombre || !f.nombre.trim() || !f.disciplina || !f.precio) { showToast("Completa nombre, disciplina y precio","err"); return; }
+    if (isEdit) {
+      persist(S.items.map(function(i){ return i.id === S.editItem.id ? Object.assign({},f,{id:S.editItem.id,fechaActualizacion:today()}) : i; }));
+      showToast("Actualizado ✓");
+    } else {
+      persist([Object.assign({},f,{id:genId(),fechaSubida:today(),fechaActualizacion:""})].concat(S.items));
+      showToast("Guardado ✓");
+    }
+    setState({view:"catalogo",editItem:null,form:emptyForm()});
+  }}, isEdit ? "Guardar cambios" : "Guardar material"));
+  brow.appendChild(btn({class:"btn-secondary", onclick:function(){ setState({view:"catalogo",editItem:null,form:emptyForm()}); }}, "Cancelar"));
+  wrap.appendChild(brow);
+  return wrap;
+}
+
+function renderCotizacion() {
+  var wrap = div({});
+  var tabs = div({style:{display:"flex",gap:"0",background:"white",borderRadius:"12px",padding:"4px",boxShadow:"0 1px 6px rgba(0,0,0,.07)",marginBottom:"16px"}});
+  [["select","1. Seleccionar"],["configure","2. Utilidad"],["resumen","3. Resumen"]].forEach(function(x){
+    var s=x[0],l=x[1];
+    tabs.appendChild(btn({class:"cot-tab"+(S.cotView===s?" active":""), onclick:function(){ setState({cotView:s}); }}, l));
+  });
+  wrap.appendChild(tabs);
+
+  if (S.cotView === "select") {
+    var box = div({style:{background:"white",borderRadius:"14px",padding:"16px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px"}});
+    var btop = div({style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}});
+    btop.appendChild(h("h2",{style:{margin:0,fontSize:"15px"}}, "Selecciona los articulos"));
+    if (S.cotItems.length) btop.appendChild(btn({class:"btn-primary",style:{padding:"9px 16px",fontSize:"13px"}, onclick:function(){ setState({cotView:"configure"}); }}, "Siguiente →"));
+    box.appendChild(btop);
+    var si = inp({class:"inp",type:"text",placeholder:"🔍 Buscar...",value:S.cotSearch, oninput:function(e){ setState({cotSearch:e.target.value,cotView:"select"}); }});
+    box.appendChild(si); wrap.appendChild(box);
+
+    if (!S.items.length) { wrap.appendChild(div({class:"empty"}, "No hay materiales aun")); return wrap; }
+    var cotFiltered = S.items
+      .filter(function(i){ return S.cotFilterDisc === "all" || i.disciplina === S.cotFilterDisc; })
+      .filter(function(i){ return !S.cotSearch || score(i, S.cotSearch) > 0; })
+      .sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+
+    cotFiltered.forEach(function(item){
+      var isSel = S.cotItems.some(function(c){ return c.itemId === item.id; });
+      var ci = S.cotItems.find(function(c){ return c.itemId === item.id; });
+      var d = getDisc(item.disciplina);
+      var age = getAge(item.fechaSubida, item.fechaActualizacion);
+      var card = div({style:{background:"white",borderRadius:"11px",marginBottom:"9px",boxShadow:"0 1px 5px rgba(0,0,0,.06)",overflow:"hidden",border:"2px solid "+(isSel?"#3B82F6":"#E2E8F0")}});
+      var top = div({style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 14px",cursor:"pointer",background:isSel?"#EFF6FF":"white"}, onclick:function(){
+        if (isSel) setState({cotItems:S.cotItems.filter(function(c){ return c.itemId !== item.id; })});
+        else setState({cotItems:S.cotItems.concat([{itemId:item.id,cantidad:"1",pct:S.globalPct,groupId:(S.cotGroups[0]&&S.cotGroups[0].id)||"g1"}])});
+      }});
+      top.appendChild(checkbox(isSel));
+      if (d) top.appendChild(div({style:{width:"36px",height:"36px",borderRadius:"8px",background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:"0"}}, d.icon));
+      var ii = div({style:{flex:"1",minWidth:"0"}});
+      ii.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}, item.nombre));
+      var itg = div({style:{display:"flex",gap:"5px",marginTop:"2px",flexWrap:"wrap",alignItems:"center"}});
+      if (d) itg.appendChild(discBadge(d));
+      var loc = [item.ciudad,item.estado].filter(Boolean).join(", ");
+      if (loc) itg.appendChild(span({style:{fontSize:"11px",color:"#06B6D4"}}, "📍 "+loc));
+      itg.appendChild(span({class:"age-badge",style:{background:age.bg,color:age.color}}, age.icon+" "+age.label));
+      ii.appendChild(itg); top.appendChild(ii);
+      var ip = div({style:{textAlign:"right",flexShrink:"0"}});
+      ip.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"15px"}}, fmt(item.precio)));
+      ip.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}}, "/" + item.unidad));
+      top.appendChild(ip); card.appendChild(top);
+      if (isSel && ci) {
+        var qrow = div({style:{padding:"10px 14px",borderTop:"1px solid #DBEAFE",background:"#F0F7FF",display:"flex",alignItems:"center",gap:"12px"}});
+        qrow.appendChild(span({style:{fontSize:"11px",fontWeight:"700",color:"#3B82F6",textTransform:"uppercase"}}, "Cantidad"));
+        var qi = inp({type:"number",min:"0.01",step:"any",value:ci.cantidad,style:{width:"90px",padding:"6px 10px",borderRadius:"7px",border:"1.5px solid #BFDBFE",fontSize:"14px",fontWeight:"700",textAlign:"center"}, oninput:function(e){
+          S.cotItems = S.cotItems.map(function(c){ return c.itemId===item.id ? Object.assign({},c,{cantidad:e.target.value}) : c; });
+        }});
+        qrow.appendChild(qi);
+        qrow.appendChild(span({style:{fontSize:"12px",color:"#64748B"}}, item.unidad));
+        qrow.appendChild(span({style:{marginLeft:"auto",fontSize:"12px",color:"#3B82F6",fontWeight:"600"}}, "Subtotal: " + fmt(Number(item.precio)*(Number(ci.cantidad)||1))));
+        card.appendChild(qrow);
+      }
+      wrap.appendChild(card);
+    });
+
+    if (S.cotItems.length) {
+      var bar = div({class:"sticky-bar"});
+      var totalCost = S.cotItems.reduce(function(s,ci){ var it = S.items.find(function(i){ return i.id===ci.itemId; }); return s+(Number(it&&it.precio||0)*Number(ci.cantidad||1)); }, 0);
+      var bi = div({style:{flex:"1"}});
+      bi.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px"}}, S.cotItems.length + " articulo" + (S.cotItems.length!==1?"s":"") + " seleccionado" + (S.cotItems.length!==1?"s":"")));
+      bi.appendChild(p({style:{margin:0,fontSize:"12px",color:"#64748B"}}, "Costo: " + fmt(totalCost)));
+      bar.appendChild(bi);
+      bar.appendChild(btn({class:"btn-primary", onclick:function(){ setState({cotView:"configure"}); }}, "Configurar utilidad →"));
+      wrap.appendChild(bar);
+    }
+  }
+  else if (S.cotView === "configure") {
+    var box2 = div({style:{background:"white",borderRadius:"14px",padding:"18px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px"}});
+    box2.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}}, "Datos de la cotizacion"));
+    var dg = div({class:"grid2"});
+    var nf = div({}); nf.appendChild(makeLabel("Nombre / Folio"));
+    nf.appendChild(inp({class:"inp",type:"text",placeholder:"COT-2024-001",value:S.cotNombre, oninput:function(e){ S.cotNombre=e.target.value; }}));
+    dg.appendChild(nf);
+    var cf = div({}); cf.appendChild(makeLabel("Cliente"));
+    cf.appendChild(inp({class:"inp",type:"text",placeholder:"Nombre del cliente",value:S.cotCliente, oninput:function(e){ S.cotCliente=e.target.value; }}));
+    dg.appendChild(cf);
+    box2.appendChild(dg); wrap.appendChild(box2);
+
+    var box3 = div({style:{background:"white",borderRadius:"14px",padding:"18px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px"}});
+    box3.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}}, "Modo de utilidad"));
+    var mg = div({style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"16px"}});
+    [{id:"global",icon:"🌐",label:"% Global",desc:"Un % para todos"},{id:"group",icon:"🗂️",label:"Por grupos",desc:"Grupos distintos"},{id:"individual",icon:"🎯",label:"Individual",desc:"% por articulo"}].forEach(function(m){
+      var active = S.pctMode === m.id;
+      var mb = btn({style:{padding:"12px 8px",borderRadius:"10px",border:"2px solid "+(active?"#3B82F6":"#E2E8F0"),background:active?"#EFF6FF":"white",textAlign:"center"}, onclick:function(){ setState({pctMode:m.id}); }});
+      mb.appendChild(div({style:{fontSize:"22px",marginBottom:"4px"}}, m.icon));
+      mb.appendChild(p({style:{margin:"0 0 2px",fontWeight:"700",fontSize:"12px",color:active?"#1D4ED8":"#334155"}}, m.label));
+      mb.appendChild(p({style:{margin:0,fontSize:"10px",color:"#94A3B8"}}, m.desc));
+      mg.appendChild(mb);
+    });
+    box3.appendChild(mg);
+
+    if (S.pctMode === "global") {
+      var gp = div({style:{background:"#F8FAFC",borderRadius:"10px",padding:"16px",display:"flex",alignItems:"center",gap:"14px"}});
+      gp.appendChild(span({style:{fontSize:"24px"}}, "🌐"));
+      var gpf = div({style:{flex:"1"}});
+      gpf.appendChild(makeLabel("% de utilidad para todos"));
+      var gpr = div({style:{display:"flex",alignItems:"center",gap:"8px"}});
+      gpr.appendChild(inp({class:"inp",type:"number",min:"0",max:"999",step:"0.5",value:S.globalPct,style:{width:"100px",textAlign:"center",fontWeight:"700",fontSize:"18px"}, oninput:function(e){ S.globalPct=e.target.value; S.cotItems=S.cotItems.map(function(c){ return Object.assign({},c,{pct:e.target.value}); }); }}));
+      gpr.appendChild(span({style:{fontWeight:"700",fontSize:"18px",color:"#64748B"}}, "%"));
+      gpf.appendChild(gpr); gp.appendChild(gpf); box3.appendChild(gp);
+    }
+    if (S.pctMode === "individual") {
+      S.cotItems.forEach(function(ci){
+        var it = S.items.find(function(i){ return i.id===ci.itemId; }); if(!it) return;
+        var d = getDisc(it.disciplina);
+        var precioU=Number(it.precio)||0, cant=Number(ci.cantidad)||1, pct=Number(ci.pct)||0, totalU=precioU*(1+pct/100);
+        var row = div({style:{background:"#F8FAFC",borderRadius:"9px",padding:"12px 14px",marginBottom:"8px",display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}});
+        if (d) row.appendChild(span({style:{fontSize:"20px"}}, d.icon));
+        var ri = div({style:{flex:"1",minWidth:"160px"}});
+        ri.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"13px"}}, it.nombre));
+        ri.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}}, fmt(precioU)+"/"+it.unidad+" · cant: "+cant));
+        row.appendChild(ri);
+        var pr = div({style:{display:"flex",alignItems:"center",gap:"6px",flexShrink:"0"}});
+        pr.appendChild(inp({class:"inp",type:"number",min:"0",max:"999",step:"0.5",value:ci.pct,style:{width:"74px",textAlign:"center",fontWeight:"700",padding:"7px 8px"}, oninput:function(e){ S.cotItems=S.cotItems.map(function(c){ return c.itemId===it.id?Object.assign({},c,{pct:e.target.value}):c; }); }}));
+        pr.appendChild(span({style:{fontWeight:"700",color:"#64748B"}}, "%"));
+        row.appendChild(pr);
+        var rv = div({style:{textAlign:"right",flexShrink:"0",minWidth:"110px"}});
+        rv.appendChild(p({style:{margin:0,fontSize:"11px",color:"#64748B"}}, "P.venta unit."));
+        rv.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px",color:"#10B981"}}, fmt(totalU)));
+        rv.appendChild(p({style:{margin:0,fontSize:"11px",color:"#64748B"}}, "Total: "+fmt(totalU*cant)));
+        row.appendChild(rv); box3.appendChild(row);
+      });
+    }
+    wrap.appendChild(box3);
+    var brow = div({style:{display:"flex",gap:"10px",justifyContent:"flex-end"}});
+    brow.appendChild(btn({class:"btn-secondary", onclick:function(){ setState({cotView:"select"}); }}, "← Volver"));
+    brow.appendChild(btn({class:"btn-green", onclick:function(){ setState({cotView:"resumen"}); }}, "Ver resumen →"));
+    wrap.appendChild(brow);
+  }
+  else if (S.cotView === "resumen") {
+    var rows = getResumenRows();
+    var grandSub = rows.reduce(function(s,r){ return s+r.subtot; },0);
+    var grandUtil = rows.reduce(function(s,r){ return s+r.utilTot; },0);
+    var grandTotal = rows.reduce(function(s,r){ return s+r.totalTot; },0);
+
+    var hdr2 = div({style:{background:"linear-gradient(135deg,#1E293B,#334155)",borderRadius:"14px",padding:"20px",marginBottom:"14px",color:"white"}});
+    var hr = div({style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}});
+    var hl = div({});
+    hl.appendChild(p({style:{margin:"0 0 2px",fontSize:"11px",color:"#94A3B8",textTransform:"uppercase"}}, "Cotizacion"));
+    hl.appendChild(h("h2",{style:{margin:"0 0 4px",fontSize:"20px",fontWeight:"700",color:"white"}}, S.cotNombre||"Sin nombre"));
+    if (S.cotCliente) hl.appendChild(p({style:{margin:0,fontSize:"13px",color:"#CBD5E1"}}, "Cliente: "+S.cotCliente));
+    hl.appendChild(p({style:{margin:"4px 0 0",fontSize:"12px",color:"#94A3B8"}}, today()+" · "+S.cotItems.length+" articulos"));
+    var hrr = div({style:{textAlign:"right"}});
+    hrr.appendChild(p({style:{margin:"0 0 2px",fontSize:"12px",color:"#94A3B8"}}, "Total de venta"));
+    hrr.appendChild(p({style:{margin:0,fontSize:"28px",fontWeight:"800",color:"#34D399"}}, fmt(grandTotal)));
+    hr.appendChild(hl); hr.appendChild(hrr); hdr2.appendChild(hr); wrap.appendChild(hdr2);
+
+    var tots = div({style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"14px"}});
+    [{label:"Costo total",val:grandSub,color:"#1E293B",bg:"white"},{label:"Utilidad",val:grandUtil,color:"#D97706",bg:"#FFFBEB"},{label:"Total venta",val:grandTotal,color:"#059669",bg:"#ECFDF5"}].forEach(function(c){
+      var tc = div({style:{background:c.bg,borderRadius:"12px",padding:"14px 16px",boxShadow:"0 1px 6px rgba(0,0,0,.06)",textAlign:"center"}});
+      tc.appendChild(p({style:{margin:"0 0 4px",fontSize:"11px",color:"#64748B",fontWeight:"600",textTransform:"uppercase"}}, c.label));
+      tc.appendChild(p({style:{margin:0,fontSize:"16px",fontWeight:"800",color:c.color}}, fmt(c.val)));
+      tots.appendChild(tc);
+    });
+    wrap.appendChild(tots);
+
+    var tbl = div({style:{background:"white",borderRadius:"14px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px",overflowX:"auto"}});
+    var table = h("table",{});
+    var thead = h("thead",{}); var trh = h("tr",{});
+    ["Material","Cant.","P.Costo","Subtotal","% Util.","Utilidad","P.Venta","Total"].forEach(function(t){ trh.appendChild(h("th",{},t)); });
+    thead.appendChild(trh); table.appendChild(thead);
+    var tbody = h("tbody",{});
+    rows.forEach(function(row){
+      var tr2 = h("tr",{});
+      [row.item.nombre, row.cant+" "+row.item.unidad, fmt(row.precioU), fmt(row.subtot), row.pct+"%", fmt(row.utilTot), fmt(row.totalU), fmt(row.totalTot)].forEach(function(v,i){
+        var td = h("td",{},String(v));
+        if (i===4) { td.innerHTML='<span style="background:#FEF3C7;color:#D97706;padding:2px 7px;border-radius:6px;font-weight:700">'+v+'</span>'; }
+        if (i>=6) { td.style.color="#059669"; td.style.fontWeight="700"; }
+        if (i===5) { td.style.color="#D97706"; }
+        tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    });
+    table.appendChild(tbody);
+    var tfoot = h("tfoot",{}); var ftr = h("tr",{});
+    ["TOTALES","","",fmt(grandSub),"",fmt(grandUtil),"",fmt(grandTotal)].forEach(function(v,i){
+      var td = h("td",{},v); if(i===7){td.style.fontSize="14px";td.style.color="#059669";} ftr.appendChild(td);
+    });
+    tfoot.appendChild(ftr); table.appendChild(tfoot);
+    tbl.appendChild(table); wrap.appendChild(tbl);
+
+    var brow2 = div({style:{display:"flex",gap:"10px",flexWrap:"wrap"}});
+    brow2.appendChild(btn({class:"btn-secondary", onclick:function(){ setState({cotView:"configure"}); }}, "← Editar"));
+    brow2.appendChild(btn({class:"btn-green", onclick:exportCotCSV}, "⬇ Exportar Excel"));
+    brow2.appendChild(btn({style:{background:"#FEF2F2",color:"#EF4444",border:"none",padding:"11px 18px",borderRadius:"10px",fontSize:"14px"}, onclick:function(){ setState({cotItems:[],cotView:"select",cotNombre:"",cotCliente:""}); showToast("Cotizacion limpiada","info"); }}, "🗑 Nueva"));
+    wrap.appendChild(brow2);
+  }
+  return wrap;
+}
+
+// ── Main render ──
+function render() {
+  var app = document.getElementById("app");
+  app.innerHTML = "";
+
+  var hdr = div({class:"header"});
+  var htop = div({class:"header-top"});
+  var logo = div({style:{display:"flex",alignItems:"center",gap:"10px"}});
+  logo.appendChild(span({style:{fontSize:"26px"}}, "📋"));
+  var lt = div({});
+  var alertCount = S.items.filter(function(i){ return (getAge(i.fechaSubida,i.fechaActualizacion).months||0) >= 12; }).length;
+  lt.appendChild(h("h1",{style:{margin:0,color:"#F1F5F9",fontSize:"18px",fontWeight:"700"}}, "Base de Precios"));
+  var sub = p({style:{margin:0,color:"#94A3B8",fontSize:"11px"}}, S.items.length + " materiales");
+  if (alertCount > 0) sub.appendChild(span({style:{color:"#FCA5A5",marginLeft:"8px"}}, "· "+alertCount+" por actualizar"));
+  lt.appendChild(sub); logo.appendChild(lt); htop.appendChild(logo);
+
+  var acts = div({style:{display:"flex",gap:"7px"}});
+  acts.appendChild(btn({style:{background:"#0F172A",border:"1px solid #475569",color:"#CBD5E1",padding:"7px 11px",borderRadius:"8px",fontSize:"12px",fontWeight:"600"}, onclick:exportCSV}, "⬇ Excel"));
+  acts.appendChild(btn({style:{background:"#3B82F6",border:"none",color:"white",padding:"7px 14px",borderRadius:"8px",fontSize:"13px",fontWeight:"700"}, onclick:function(){ setState({view:"agregar",editItem:null,form:emptyForm()}); }}, "+ Nuevo"));
+  htop.appendChild(acts); hdr.appendChild(htop);
+
+  var tabsEl = div({class:"tabs"});
+  [{id:"catalogo",label:"📦 Catalogo"},{id:"cotizacion",label:"🧮 Cotizar"+(S.cotItems.length?" ("+S.cotItems.length+")":"")},{id:"buscar",label:"🔍 Busqueda"},{id:"escanear",label:"📷 Escanear"},{id:"agregar",label:S.editItem?"✏️ Editar":"➕ Manual"}].forEach(function(t){
+    tabsEl.appendChild(btn({class:"tab"+(S.view===t.id?" active":""), onclick:function(){ setState({view:t.id}); }}, t.label));
+  });
+  hdr.appendChild(tabsEl); app.appendChild(hdr);
+
+  var content = div({class:"content"});
+  if      (S.view === "catalogo")    content.appendChild(renderCatalogo());
+  else if (S.view === "buscar")      content.appendChild(renderBusqueda());
+  else if (S.view === "escanear")    content.appendChild(renderEscanear());
+  else if (S.view === "agregar")     content.appendChild(renderForm());
+  else if (S.view === "cotizacion")  content.appendChild(renderCotizacion());
+  app.appendChild(content);
+
+  if (S.toast) {
+    app.appendChild(div({class:"toast",style:{background:S.toast.bg}}, S.toast.msg));
+  }
+
+  if (S.confirmDel) {
+    var item = S.items.find(function(i){ return i.id === S.confirmDel; });
+    var bg2 = div({class:"modal-bg"});
+    var m = div({class:"modal"});
+    m.appendChild(p({style:{margin:"0 0 7px",fontWeight:"700",fontSize:"16px"}}, "¿Eliminar material?"));
+    m.appendChild(p({style:{margin:"0 0 20px",color:"#64748B",fontSize:"14px"}}, '"' + (item&&item.nombre||"") + '" sera eliminado permanentemente.'));
+    var br = div({style:{display:"flex",gap:"10px"}});
+    br.appendChild(btn({class:"btn-red", onclick:function(){ persist(S.items.filter(function(i){ return i.id!==S.confirmDel; })); setState({confirmDel:null}); showToast("Eliminado","info"); }}, "Eliminar"));
+    br.appendChild(btn({class:"btn-secondary", onclick:function(){ setState({confirmDel:null}); }}, "Cancelar"));
+    m.appendChild(br); bg2.appendChild(m); app.appendChild(bg2);
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>
