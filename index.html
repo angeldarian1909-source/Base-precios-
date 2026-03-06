@@ -61,25 +61,11 @@ tfoot td{font-weight:700;background:#F1F5F9 !important;border-top:2px solid #E2E
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1E293B,#334155);padding:20px;}
 .login-box{background:white;border-radius:20px;padding:36px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
-
-.btn-logout{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#FCA5A5;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;}
-.session-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:4px 10px;font-size:11px;color:#94A3B8;}
-.session-dot{width:7px;height:7px;border-radius:50%;background:#34D399;flex-shrink:0;}
-.idle-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px;}
-.idle-modal{background:white;border-radius:20px;padding:30px 26px;max-width:320px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.3);text-align:center;}
-.idle-countdown{font-size:52px;font-weight:800;color:#EF4444;line-height:1;margin:12px 0;}
-.idle-bar-wrap{background:#FEE2E2;border-radius:99px;height:8px;margin:14px 0 20px;overflow:hidden;}
-.idle-bar{height:100%;background:#EF4444;border-radius:99px;transition:width 1s linear;}
 </style>
-
 <!-- Firebase SDK -->
-
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-app-compat.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-firestore-compat.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.8.0/firebase-auth-compat.min.js"></script>
-
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div id="app"></div><!-- Hidden file input always in DOM - fixes gallery on mobile --><input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment" style="display:none"><script>
@@ -110,19 +96,6 @@ var currentUser = null;
 // Users whitelist stored in Firestore: collection “usuarios”, doc = email, field “activo”: true/false
 var USERS_COL = “usuarios”;
 
-var IDLE_TIMEOUT_MS = 60*60*1000, IDLE_WARNING_MS = 59*60*1000;
-var idleTimer=null, warningTimer=null, countdownTimer=null;
-var idleCountdown=60, showingIdleWarning=false;
-var ACTIVITY_EVENTS=[“mousemove”,“mousedown”,“keydown”,“touchstart”,“touchmove”,“scroll”,“click”,“wheel”];
-function resetIdleTimers(){if(!currentUser||showingIdleWarning)return;clearTimeout(idleTimer);clearTimeout(warningTimer);warningTimer=setTimeout(showIdleWarning,IDLE_WARNING_MS);idleTimer=setTimeout(performAutoLogout,IDLE_TIMEOUT_MS);}
-function startActivityTracking(){ACTIVITY_EVENTS.forEach(function(ev){document.addEventListener(ev,resetIdleTimers,{passive:true});});resetIdleTimers();}
-function stopActivityTracking(){ACTIVITY_EVENTS.forEach(function(ev){document.removeEventListener(ev,resetIdleTimers);});clearTimeout(idleTimer);clearTimeout(warningTimer);clearInterval(countdownTimer);}
-function showIdleWarning(){showingIdleWarning=true;idleCountdown=60;S.idleWarning=true;render();countdownTimer=setInterval(function(){idleCountdown–;var bar=document.getElementById(“idle-bar”),num=document.getElementById(“idle-num”);if(bar)bar.style.width=(idleCountdown/60*100)+”%”;if(num)num.textContent=idleCountdown;if(idleCountdown<=0){clearInterval(countdownTimer);performAutoLogout();}},1000);}
-function dismissIdleWarning(){clearInterval(countdownTimer);showingIdleWarning=false;S.idleWarning=false;render();resetIdleTimers();}
-function performAutoLogout(){stopActivityTracking();showingIdleWarning=false;S.idleWarning=false;doLogout();showToast(“Sesion cerrada por inactividad”,“info”);}
-function manualLogout(){S.confirmLogout=true;render();}
-function renderIdleWarning(){var bg=div({class:“idle-modal-bg”}),m=div({class:“idle-modal”});m.appendChild(div({style:{fontSize:“44px”,marginBottom:“6px”}},“⏳”));m.appendChild(h(“h2”,{style:{margin:“0 0 6px”,fontSize:“18px”,fontWeight:“800”}},”¿Sigues ahi?”));m.appendChild(p({style:{margin:“0 0 4px”,fontSize:“13px”,color:”#64748B”}},“Tu sesion se cerrara en:”));m.appendChild(div({id:“idle-num”,class:“idle-countdown”},String(idleCountdown)));var bw=div({class:“idle-bar-wrap”});bw.appendChild(div({id:“idle-bar”,class:“idle-bar”,style:{width:“100%”}}));m.appendChild(bw);m.appendChild(p({style:{margin:“0 0 20px”,fontSize:“12px”,color:”#94A3B8”}},“segundos”));m.appendChild(btn({class:“btn-primary”,style:{width:“100%”,padding:“13px”,marginBottom:“10px”},onclick:dismissIdleWarning},“✋ Continuar sesion”));m.appendChild(btn({class:“btn-secondary”,style:{width:“100%”,padding:“11px”},onclick:performAutoLogout},“Cerrar sesion ahora”));bg.appendChild(m);return bg;}
-
 function initAuth() {
 var auth = firebase.auth();
 auth.onAuthStateChanged(function(user) {
@@ -133,7 +106,6 @@ if (doc.exists && doc.data().activo === true) {
 currentUser = user;
 S.view = S.view === “login” ? “catalogo” : S.view;
 initFirebase();
-startActivityTracking();
 render();
 } else {
 showToast(“Acceso denegado. Contacta al administrador.”, “err”);
@@ -148,7 +120,6 @@ db.collection(USERS_COL).doc(user.email).set({activo:true, nombre:user.email, ad
 currentUser = user;
 S.view = “catalogo”;
 initFirebase();
-startActivityTracking();
 render();
 });
 });
@@ -269,7 +240,6 @@ cotView: “select”, cotItems: [], cotGroups: [{id:“g1”,nombre:“Grupo 1�
 globalPct: “30”, pctMode: “global”, cotNombre: “”, cotCliente: “”,
 cotSearch: “”, cotFilterDisc: “all”,
 quickEditId: null, quickEditVal: “”,
-idleWarning: false, confirmLogout: false,
 };
 
 function setState(patch) {
@@ -1385,12 +1355,6 @@ function render() {
 var app = document.getElementById(“app”);
 app.innerHTML = “”;
 
-if (S.view === “login”) {
-app.appendChild(renderLogin());
-if (S.toast) app.appendChild(div({class:“toast”,style:{background:S.toast.bg}}, S.toast.msg));
-return;
-}
-
 var hdr = div({class:“header”});
 var htop = div({class:“header-top”});
 var logo = div({style:{display:“flex”,alignItems:“center”,gap:“10px”}});
@@ -1436,8 +1400,6 @@ br.appendChild(btn({class:“btn-red”, onclick:function(){ persist(S.items.fil
 br.appendChild(btn({class:“btn-secondary”, onclick:function(){ setState({confirmDel:null}); }}, “Cancelar”));
 m.appendChild(br); bg2.appendChild(m); app.appendChild(bg2);
 }
-if(S.confirmLogout){var lbg=div({class:“modal-bg”}),lm=div({class:“modal”,style:{textAlign:“center”}});lm.appendChild(div({style:{fontSize:“44px”,marginBottom:“10px”}},“🔐”));lm.appendChild(p({style:{margin:“0 0 6px”,fontWeight:“700”,fontSize:“16px”}},”¿Cerrar sesion?”));lm.appendChild(p({style:{margin:“0 0 22px”,color:”#64748B”,fontSize:“14px”}},“Se cerrara tu sesion.”));var lbr=div({style:{display:“flex”,gap:“10px”}});lbr.appendChild(btn({class:“btn-red”,style:{flex:“1”,padding:“12px”},onclick:function(){setState({confirmLogout:false});showToast(“Sesion cerrada”,“info”);setTimeout(doLogout,600);}},“⏻ Cerrar sesion”));lbr.appendChild(btn({class:“btn-secondary”,style:{flex:“1”,padding:“12px”},onclick:function(){setState({confirmLogout:false});}},“Cancelar”));lm.appendChild(lbr);lbg.appendChild(lm);app.appendChild(lbg);}
-if(S.idleWarning){app.appendChild(renderIdleWarning());}
 }
 
 render();
