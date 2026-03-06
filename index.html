@@ -1,6 +1,4 @@
-<!DOCTYPE html><html lang="es">
-
-<head>
+<!DOCTYPE html><html lang="es"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -61,49 +59,17 @@ tfoot td{font-weight:700;background:#F1F5F9 !important;border-top:2px solid #E2E
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1E293B,#334155);padding:20px;}
 .login-box{background:white;border-radius:20px;padding:36px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
-
-/* ── Idle warning modal ── */
-.idle-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px;}
-.idle-modal{background:white;border-radius:20px;padding:30px 26px;max-width:320px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.3);text-align:center;}
-.idle-countdown{font-size:52px;font-weight:800;color:#EF4444;line-height:1;margin:12px 0;}
-.idle-bar-wrap{background:#FEE2E2;border-radius:99px;height:8px;margin:14px 0 20px;overflow:hidden;}
-.idle-bar{height:100%;background:#EF4444;border-radius:99px;transition:width 1s linear;}
-
-/* ── Logout button in header ── */
-.btn-logout{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#FCA5A5;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;transition:all .2s;}
-.btn-logout:hover{background:rgba(239,68,68,.28);color:#FEE2E2;}
-
-/* ── Session info chip ── */
-.session-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:4px 10px;font-size:11px;color:#94A3B8;}
-.session-dot{width:7px;height:7px;border-radius:50%;background:#34D399;box-shadow:0 0 6px #34D399;flex-shrink:0;}
 </style>
-
 <!-- Firebase SDK -->
-
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-
 </head>
 <body>
-<div id="app"></div>
-<input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment" style="display:none">
-<script>
-window.onerror = function(msg, src, line, col, err) {
-  document.getElementById("app").innerHTML = 
-    "<div style='padding:20px;font-family:monospace;color:red;background:#fff'>" +
-    "<h2>Error de JavaScript</h2>" +
-    "<p>" + msg + "</p>" +
-    "<p>Linea: " + line + " Col: " + col + "</p>" +
-    "<p>" + (err ? err.stack : "") + "</p></div>";
-  return false;
-};
+<div id="app"></div><!-- Hidden file input always in DOM - fixes gallery on mobile --><input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment" style="display:none"><script>
 var ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
 var API_KEY = "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";
-var STORAGE_KEY = "precios_v5";
-
+var STORAGE_KEY = "precios_v5";// Firebase config
 var FIREBASE_CONFIG = {
 apiKey: “AIzaSyAS8KPL0eIzWZQvlehUqXrtrbnKhMFmlFs”,
 authDomain: “base-precios-unitarios.firebaseapp.com”,
@@ -112,101 +78,26 @@ storageBucket: “base-precios-unitarios.firebasestorage.app”,
 messagingSenderId: “718014666569”,
 appId: “1:718014666569:web:2dbe2c34d03c0fd80f2c98”
 };
-
+// Initialize Firebase
 var fbApp = firebase.initializeApp(FIREBASE_CONFIG);
 var db = firebase.firestore();
 var COL = “materiales”;
+// Firebase sync state
 var fbLoaded = false;
 var fbListenerActive = false;
 var currentUser = null;
+// Users whitelist stored in Firestore: collection “usuarios”, doc = email, field “activo”: true/false
 var USERS_COL = “usuarios”;
-
-// ══════════════════════════════════════════════
-// AUTO-LOGOUT POR INACTIVIDAD
-// ══════════════════════════════════════════════
-var IDLE_TIMEOUT_MS  = 60 * 60 * 1000;  // 60 minutos
-var IDLE_WARNING_MS  = 59 * 60 * 1000;  // aviso 60 seg antes
-var idleTimer        = null;
-var warningTimer     = null;
-var countdownTimer   = null;
-var idleCountdown    = 60;
-var showingIdleWarning = false;
-
-var ACTIVITY_EVENTS = [“mousemove”,“mousedown”,“keydown”,“touchstart”,“touchmove”,“scroll”,“click”,“wheel”];
-
-function resetIdleTimers() {
-if (!currentUser) return;
-if (showingIdleWarning) return; // si ya salió el aviso no reiniciar
-clearTimeout(idleTimer);
-clearTimeout(warningTimer);
-warningTimer = setTimeout(showIdleWarning, IDLE_WARNING_MS);
-idleTimer    = setTimeout(performAutoLogout, IDLE_TIMEOUT_MS);
-}
-
-function startActivityTracking() {
-ACTIVITY_EVENTS.forEach(function(ev) {
-document.addEventListener(ev, resetIdleTimers, { passive: true });
-});
-resetIdleTimers();
-}
-
-function stopActivityTracking() {
-ACTIVITY_EVENTS.forEach(function(ev) {
-document.removeEventListener(ev, resetIdleTimers);
-});
-clearTimeout(idleTimer);
-clearTimeout(warningTimer);
-clearInterval(countdownTimer);
-}
-
-function showIdleWarning() {
-showingIdleWarning = true;
-idleCountdown = 60;
-S.idleWarning = true;
-render();
-countdownTimer = setInterval(function() {
-idleCountdown -= 1;
-var bar = document.getElementById(“idle-bar”);
-var num = document.getElementById(“idle-num”);
-if (bar) bar.style.width = (idleCountdown / 60 * 100) + “%”;
-if (num) num.textContent = idleCountdown;
-if (idleCountdown <= 0) {
-clearInterval(countdownTimer);
-performAutoLogout();
-}
-}, 1000);
-}
-
-function dismissIdleWarning() {
-clearInterval(countdownTimer);
-showingIdleWarning = false;
-S.idleWarning = false;
-render();
-resetIdleTimers(); // reinicia temporizadores
-}
-
-function performAutoLogout() {
-stopActivityTracking();
-showingIdleWarning = false;
-S.idleWarning = false;
-S.view = “login”;
-doLogout();
-showToast(“Sesion cerrada por inactividad”, “info”);
-}
-
-// ══════════════════════════════════════════════
-// AUTH
-// ══════════════════════════════════════════════
 function initAuth() {
 var auth = firebase.auth();
 auth.onAuthStateChanged(function(user) {
 if (user) {
+// Check if user is allowed
 db.collection(USERS_COL).doc(user.email).get().then(function(doc) {
 if (doc.exists && doc.data().activo === true) {
 currentUser = user;
 S.view = S.view === “login” ? “catalogo” : S.view;
 initFirebase();
-startActivityTracking();
 render();
 } else {
 showToast(“Acceso denegado. Contacta al administrador.”, “err”);
@@ -216,41 +107,29 @@ S.view = “login”;
 render();
 }
 }).catch(function() {
-db.collection(USERS_COL).doc(user.email).set({activo:true,nombre:user.email,admin:true,creado:new Date().toISOString()}).then(function(){
+// If usuarios collection doesn’t exist yet, first user becomes admin
+db.collection(USERS_COL).doc(user.email).set({activo:true, nombre:user.email, admin:true, creado:new Date().toISOString()}).then(function(){
 currentUser = user;
 S.view = “catalogo”;
 initFirebase();
-startActivityTracking();
 render();
 });
 });
 } else {
 currentUser = null;
-stopActivityTracking();
 S.view = “login”;
 fbListenerActive = false;
 render();
 }
 });
 }
-
 function doLogin(email, password, onErr) {
 firebase.auth().signInWithEmailAndPassword(email, password)
 .catch(function(e) { onErr(e.message); });
 }
-
 function doLogout() {
-stopActivityTracking();
-currentUser = null;
-fbListenerActive = false;
 firebase.auth().signOut();
 }
-
-function manualLogout() {
-S.confirmLogout = true;
-render();
-}
-
 function initFirebase() {
 if (fbListenerActive) return;
 fbListenerActive = true;
@@ -259,7 +138,7 @@ db.collection(COL).orderBy(“fechaSubida”,“desc”).onSnapshot(function(sna
 var items = [];
 snap.forEach(function(doc) { items.push(Object.assign({id:doc.id}, doc.data())); });
 S.items = items;
-saveItems(items);
+saveItems(items); // keep local backup
 fbLoaded = true;
 render();
 if(!fbLoaded) showToast(“Datos sincronizados ✓”);
@@ -268,21 +147,15 @@ console.error(“Firebase error:”, err);
 showToast(“Sin conexion - usando datos locales”, “info”);
 });
 }
-
 function fbSave(item) {
 var id = item.id;
 var data = Object.assign({}, item);
 delete data.id;
 return db.collection(COL).doc(id).set(data);
 }
-
 function fbDelete(id) {
 return db.collection(COL).doc(id).delete();
 }
-
-// ══════════════════════════════════════════════
-// DATA / CONSTANTS
-// ══════════════════════════════════════════════
 var DISC = [
 {id:“tornilleria”,label:“Tornilleria / Ferreteria”,color:”#F59E0B”,bg:”#FEF3C7”,icon:“🔩”},
 {id:“electricidad”,label:“Electricidad”,color:”#3B82F6”,bg:”#DBEAFE”,icon:“⚡”},
@@ -293,41 +166,34 @@ var DISC = [
 {id:“herreria”,label:“Herreria”,color:”#7C3AED”,bg:”#EDE9FE”,icon:“⚒️”},
 {id:“consumibles”,label:“Consumibles”,color:”#EC4899”,bg:”#FCE7F3”,icon:“📦”},
 ];
-
 var ESTADOS = [“Aguascalientes”,“Baja California”,“Baja California Sur”,“Campeche”,“Chiapas”,“Chihuahua”,“Ciudad de Mexico”,“Coahuila”,“Colima”,“Durango”,“Guanajuato”,“Guerrero”,“Hidalgo”,“Jalisco”,“Mexico”,“Michoacan”,“Morelos”,“Nayarit”,“Nuevo Leon”,“Oaxaca”,“Puebla”,“Queretaro”,“Quintana Roo”,“San Luis Potosi”,“Sinaloa”,“Sonora”,“Tabasco”,“Tamaulipas”,“Tlaxcala”,“Veracruz”,“Yucatan”,“Zacatecas”];
 var UNIDADES = [“pza”,“ml”,“m”,“m2”,“m3”,“kg”,“ton”,“lt”,“rollo”,“caja”,“par”,“juego”,“tramo”,“varilla”,“bulto”];
-
 function genId() { return Date.now() + “-” + Math.random().toString(36).slice(2,7); }
 function today() { return new Date().toISOString().slice(0,10); }
 function fmt(v) { return Number(v).toLocaleString(“es-MX”,{style:“currency”,currency:“MXN”,minimumFractionDigits:2}); }
 function getDisc(id) { return DISC.find(function(d){ return d.id === id; }); }
-
 function getAge(subida, act) {
 var ref = act || subida;
 if (!ref) return {color:”#94A3B8”,bg:”#F1F5F9”,label:“Sin fecha”,icon:“⚪”,months:null};
-var m = Math.floor((Date.now() - new Date(ref)) / (1000*60*60*24*30.44));
+var m = Math.floor((Date.now() - new Date(ref)) / (100060602430.44));
 if (m < 6)  return {color:”#059669”,bg:”#D1FAE5”,label:m+“m”,icon:“🟢”,months:m};
 if (m < 12) return {color:”#D97706”,bg:”#FEF3C7”,label:m+“m”,icon:“🟡”,months:m};
 if (m < 18) return {color:”#EA580C”,bg:”#FFEDD5”,label:m+“m ⚠️”,icon:“🟠”,months:m};
 return {color:”#DC2626”,bg:”#FEE2E2”,label:m+“m — Actualizar”,icon:“🔴”,months:m};
 }
-
 function loadItems() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || “[]”); } catch(e) { return []; } }
 function saveItems(arr) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch(e) {} }
-
 var FICHA_KEY = “fichas_v1”;
 function loadFichas() { try { return JSON.parse(localStorage.getItem(FICHA_KEY) || “{}”); } catch(e) { return {}; } }
 function saveFichas(obj) { try { localStorage.setItem(FICHA_KEY, JSON.stringify(obj)); } catch(e) {} }
 var fichas = loadFichas();
-
 function emptyForm() {
 return {nombre:””,disciplina:””,subpartida:””,unidad:“pza”,precio:””,subtotal:””,iva:””,total:””,proveedor:””,fecha:today(),notas:””,estado:””,ciudad:””};
 }
-
 var IVA_RATE = 0.16;
 function calcFromSubtotal(v) {
 var sub = parseFloat(v) || 0;
-return { subtotal: sub.toFixed(2), iva: (sub*IVA_RATE).toFixed(2), total: (sub*(1+IVA_RATE)).toFixed(2) };
+return { subtotal: sub.toFixed(2), iva: (subIVA_RATE).toFixed(2), total: (sub(1+IVA_RATE)).toFixed(2) };
 }
 function calcFromTotal(v) {
 var tot = parseFloat(v) || 0;
@@ -338,17 +204,13 @@ var seen = {};
 S.items.forEach(function(i){ if(i.proveedor && i.proveedor.trim()) seen[i.proveedor.trim()] = true; });
 return Object.keys(seen).sort();
 }
-
-// ══════════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════════
+// State
 var S = {
 items: loadItems(),
 view: “login”,
 search: “”, filterDisc: “all”, filterAge: “all”, sortBy: “nombre”,
 toast: null, toastTimer: null,
 confirmDel: null,
-confirmLogout: false,
 editItem: null,
 form: emptyForm(),
 scanStep: “idle”, scanPreview: null, scanResults: [], scanSel: {}, scanEdits: {}, scanErr: “”, scanLoc: {estado:””,ciudad:””},
@@ -356,23 +218,22 @@ cotView: “select”, cotItems: [], cotGroups: [{id:“g1”,nombre:“Grupo 1�
 globalPct: “30”, pctMode: “global”, cotNombre: “”, cotCliente: “”,
 cotSearch: “”, cotFilterDisc: “all”,
 quickEditId: null, quickEditVal: “”,
-idleWarning: false,
 };
-
 function setState(patch) {
 var searchOnly = Object.keys(patch).length === 1 && “search” in patch;
 Object.assign(S, patch);
 if (!searchOnly) render();
 }
-
 function persist(items) {
 var oldIds = S.items.map(function(i){ return i.id; });
 var newIds = items.map(function(i){ return i.id; });
+// Find added/updated items
 items.forEach(function(item) {
 if (fbListenerActive) {
 fbSave(item).catch(function(e){ console.error(“fbSave error”,e); });
 }
 });
+// Find deleted items
 oldIds.forEach(function(id) {
 if (newIds.indexOf(id) === -1 && fbListenerActive) {
 fbDelete(id).catch(function(e){ console.error(“fbDelete error”,e); });
@@ -382,7 +243,6 @@ S.items = items;
 saveItems(items);
 render();
 }
-
 function showToast(msg, type) {
 type = type || “ok”;
 if (S.toastTimer) clearTimeout(S.toastTimer);
@@ -391,24 +251,24 @@ S.toast = {msg: msg, bg: bg};
 S.toastTimer = setTimeout(function(){ S.toast = null; render(); }, 3200);
 render();
 }
-
-// ══════════════════════════════════════════════
-// FILE INPUT
-// ══════════════════════════════════════════════
+// API call - routes through proxy if on Vercel, direct otherwise
 async function extractFromFile(b64, mediaType) {
 var disc = DISC.map(function(d){ return d.id; }).join(”, “);
 var prompt = “Eres un asistente especializado en construccion en Mexico. Analiza esta cotizacion y extrae TODOS los materiales con sus precios unitarios. Para cada item devuelve JSON con: nombre, disciplina (uno de: “ + disc + “), subpartida, unidad, precio (numero, precio UNITARIO), proveedor, fecha (YYYY-MM-DD), notas, estado, ciudad. IMPORTANTE: extrae solo filas con descripcion y precio unitario. Ignora totales e IVA. Responde UNICAMENTE con array JSON valido. Si no hay materiales: []”;
-
 var content = mediaType.startsWith(“image/”)
 ? [{type:“image”,source:{type:“base64”,media_type:mediaType,data:b64}},{type:“text”,text:prompt}]
 : [{type:“document”,source:{type:“base64”,media_type:“application/pdf”,data:b64}},{type:“text”,text:prompt}];
-
-var res = await fetch(”/api/chat”, {
+// Try proxy first (Vercel), then direct
+var useProxy = true;
+var res;
+if (useProxy) {
+res = await fetch(”/api/chat”, {
 method: “POST”,
 headers: {“Content-Type”:“application/json”},
 body: JSON.stringify({content: content})
-}).catch(function() {
-return fetch(ANTHROPIC_API, {
+});
+} else {
+res = await fetch(ANTHROPIC_API, {
 method: “POST”,
 headers: {
 “Content-Type”: “application/json”,
@@ -418,18 +278,17 @@ headers: {
 },
 body: JSON.stringify({model:“claude-opus-4-5”,max_tokens:2048,messages:[{role:“user”,content:content}]})
 });
-});
-
+}
 if (!res.ok) {
 var e = await res.json().catch(function(){ return {}; });
 throw new Error((e.error && e.error.message) || “Error “ + res.status);
 }
 var data = await res.json();
 var raw = (data.content || []).map(function(b){ return b.text || “”; }).join(””).trim();
-var match = raw.match(/[[\s\S]*]/);
+var match = raw.match(/[[\s\S]]/);
 if (!match) throw new Error(“No se encontraron materiales. Intenta con imagen mas clara.”);
 var parsed;
-try { parsed = JSON.parse(match[0]); } catch(e) { parsed = JSON.parse(match[0].replace(/,(\s*[}]])/g,”$1”)); }
+try { parsed = JSON.parse(match[0]); } catch(e) { parsed = JSON.parse(match[0].replace(/,(\s[}]])/g,”$1”)); }
 return parsed.map(function(x){
 return {
 nombre: String(x.nombre || “Sin nombre”),
@@ -445,7 +304,145 @@ ciudad: String(x.ciudad || “”),
 };
 });
 }
-
+// DOM helpers
+function h(tag, attrs) {
+var children = Array.prototype.slice.call(arguments, 2);
+var el = document.createElement(tag);
+if (attrs) {
+Object.keys(attrs).forEach(function(k) {
+var v = attrs[k];
+if (k === “class”) el.className = v;
+else if (k.startsWith(“on”)) el[k.toLowerCase()] = v;
+else if (k === “style” && typeof v === “object”) Object.assign(el.style, v);
+else if (k === “checked” && tag === “input”) el.checked = v;
+else if (v !== null && v !== undefined && v !== false) el.setAttribute(k, v);
+});
+}
+children.flat(Infinity).forEach(function(c) {
+if (c == null || c === false) return;
+el.appendChild(typeof c === “string” ? document.createTextNode(c) : c);
+});
+return el;
+}
+function div(a) { return h.apply(null, [“div”].concat(Array.prototype.slice.call(arguments))); }
+function p(a) { return h.apply(null, [“p”].concat(Array.prototype.slice.call(arguments))); }
+function span(a) { return h.apply(null, [“span”].concat(Array.prototype.slice.call(arguments))); }
+function btn(a) { return h.apply(null, [“button”].concat(Array.prototype.slice.call(arguments))); }
+function inp(a) { return h(“input”, a); }
+function sel(a) { return h.apply(null, [“select”].concat(Array.prototype.slice.call(arguments))); }
+function opt(v, t, selected) { return h(“option”, Object.assign({value:v}, selected ? {selected:“selected”} : {}), t); }
+function ta(a) { return h.apply(null, [“textarea”].concat(Array.prototype.slice.call(arguments))); }
+function lbl(a) { return h.apply(null, [“label”].concat(Array.prototype.slice.call(arguments))); }
+function makeInp(attrs) { return inp(Object.assign({class:“inp”}, attrs || {})); }
+function makeSelect(val, options, onChange) {
+var el = sel({class:“inp”, onchange: function(e){ onChange(e.target.value); }});
+options.forEach(function(o){ el.appendChild(opt(o[0], o[1], o[0] === val)); });
+return el;
+}
+function makeLabel(text) { return lbl({class:“fl”}, text); }
+function checkbox(checked) {
+return div({class:“checkbox” + (checked ? “ checked” : “”)},
+checked ? span({style:{color:“white”,fontSize:“13px”,fontWeight:“700”,lineHeight:“1”}}, “✓”) : “”
+);
+}
+function ageBadge(item) {
+var age = getAge(item.fechaSubida, item.fechaActualizacion);
+return span({class:“age-badge”,style:{background:age.bg,color:age.color}}, age.icon + “ “ + age.label);
+}
+function discBadge(d) {
+return d ? span({class:“disc-badge”,style:{background:d.bg,color:d.color}}, d.label) : span({}, “”);
+}
+function score(item, q) {
+if (!q) return 1;
+var ql = q.toLowerCase();
+var s = 0;
+if (item.nombre.toLowerCase().startsWith(ql)) s += 10;
+else if (item.nombre.toLowerCase().includes(ql)) s += 6;
+if ((item.subpartida || “”).toLowerCase().includes(ql)) s += 4;
+if ((item.proveedor || “”).toLowerCase().includes(ql)) s += 2;
+if ((item.estado || “”).toLowerCase().includes(ql)) s += 2;
+if ((item.ciudad || “”).toLowerCase().includes(ql)) s += 2;
+if ((item.notas || “”).toLowerCase().includes(ql)) s += 1;
+var d = DISC.find(function(x){ return x.id === item.disciplina; });
+if (d && d.label.toLowerCase().includes(ql)) s += 3;
+return s;
+}
+function ageFilter(item) {
+if (S.filterAge === “all”) return true;
+var a = getAge(item.fechaSubida, item.fechaActualizacion);
+if (S.filterAge === “verde”)    return a.months !== null && a.months < 6;
+if (S.filterAge === “amarillo”) return a.months !== null && a.months >= 6 && a.months < 12;
+if (S.filterAge === “naranja”)  return a.months !== null && a.months >= 12 && a.months < 18;
+if (S.filterAge === “rojo”)     return a.months !== null && a.months >= 18;
+return true;
+}
+function getFiltered() {
+return S.items
+.filter(function(i){ return S.filterDisc === “all” || i.disciplina === S.filterDisc; })
+.filter(ageFilter)
+.filter(function(i){ return !S.search || score(i, S.search) > 0; })
+.sort(function(a, b){
+if (S.search) return score(b, S.search) - score(a, S.search);
+if (S.sortBy === “precio”) return Number(a.precio) - Number(b.precio);
+if (S.sortBy === “precioDesc”) return Number(b.precio) - Number(a.precio);
+if (S.sortBy === “fecha”) return (b.fechaSubida || “”).localeCompare(a.fechaSubida || “”);
+if (S.sortBy === “antiguedad”) return (a.fechaActualizacion || a.fechaSubida || “”).localeCompare(b.fechaActualizacion || b.fechaSubida || “”);
+return a.nombre.localeCompare(b.nombre);
+});
+}
+function exportCSV() {
+if (!S.items.length) { showToast(“No hay materiales”, “err”); return; }
+var headers = [“Nombre”,“Disciplina”,“Sub-Partida”,“Unidad”,“Precio”,“Proveedor”,“Estado”,“Ciudad”,“F.Cotizacion”,“F.Subida”,“F.Actualizacion”,“Notas”];
+var rows = S.items.map(function(i){
+return [i.nombre, (getDisc(i.disciplina) && getDisc(i.disciplina).label) || i.disciplina, i.subpartida||””, i.unidad, Number(i.precio).toFixed(2), i.proveedor||””, i.estado||””, i.ciudad||””, i.fecha||””, i.fechaSubida||””, i.fechaActualizacion||””, i.notas||””];
+});
+var csv = [headers].concat(rows).map(function(r){ return r.map(function(c){ return ‘”’ + String(c).replace(/”/g,’””’) + ‘”’; }).join(”,”); }).join(”\n”);
+var a = document.createElement(“a”);
+a.href = “data:text/csv;charset=utf-8,\uFEFF” + encodeURIComponent(csv);
+a.download = “Precios_” + today() + “.csv”;
+a.click();
+showToast(“Exportado ✓”);
+}
+function getEffPct(ci) {
+if (S.pctMode === “global”) return Number(S.globalPct) || 0;
+if (S.pctMode === “individual”) return Number(ci.pct) || 0;
+var g = S.cotGroups.find(function(g){ return g.id === ci.groupId; });
+return Number(g && g.pct) || 0;
+}
+function getResumenRows() {
+return S.cotItems.map(function(ci){
+var item = S.items.find(function(i){ return i.id === ci.itemId; });
+if (!item) return null;
+var cant = Number(ci.cantidad) || 1;
+var pct = getEffPct(ci);
+var precioU = Number(item.precio) || 0;
+var subtot = precioU * cant;
+var utilU = precioU * (pct / 100);
+var totalU = precioU + utilU;
+var utilTot = utilU * cant;
+var totalTot = totalU * cant;
+return {item:item,ci:ci,cant:cant,pct:pct,precioU:precioU,subtot:subtot,utilU:utilU,totalU:totalU,utilTot:utilTot,totalTot:totalTot};
+}).filter(Boolean);
+}
+function exportCotCSV() {
+var rows = getResumenRows();
+var grandSub = rows.reduce(function(s,r){ return s+r.subtot; }, 0);
+var grandUtil = rows.reduce(function(s,r){ return s+r.utilTot; }, 0);
+var grandTotal = rows.reduce(function(s,r){ return s+r.totalTot; }, 0);
+var headers = [”#”,“Material”,“Disciplina”,“Unidad”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”];
+var data = rows.map(function(r, i){
+return [i+1, r.item.nombre, (getDisc(r.item.disciplina) && getDisc(r.item.disciplina).label) || r.item.disciplina, r.item.unidad, r.cant, r.precioU.toFixed(2), r.subtot.toFixed(2), r.pct+”%”, r.utilTot.toFixed(2), r.totalU.toFixed(2), r.totalTot.toFixed(2)];
+});
+data.push([]);
+data.push([””,””,””,””,””,“SUBTOTAL”,grandSub.toFixed(2),””,“UTILIDAD”,“TOTAL VENTA”,grandTotal.toFixed(2)]);
+var csv = [headers].concat(data).map(function(r){ return r.map(function(c){ return ‘”’ + String(c).replace(/”/g,’””’) + ‘”’; }).join(”,”); }).join(”\n”);
+var a = document.createElement(“a”);
+a.href = “data:text/csv;charset=utf-8,\uFEFF” + encodeURIComponent(csv);
+a.download = “Cotizacion_” + (S.cotNombre || “Nueva”) + “_” + today() + “.csv”;
+a.click();
+showToast(“Cotizacion exportada ✓”);
+}
+// ── Setup file input (always in DOM, fixes iOS gallery) ──
 var fileInputEl = document.getElementById(“fileInput”);
 fileInputEl.addEventListener(“change”, async function(e) {
 var file = e.target.files && e.target.files[0];
@@ -474,276 +471,56 @@ setState({scanStep:“review”, scanResults:tagged, scanSel:selMap, scanEdits:{
 setState({scanStep:“idle”, scanErr: (err && err.message) || “Error al procesar.”});
 }
 });
-
-// ══════════════════════════════════════════════
-// DOM HELPERS
-// ══════════════════════════════════════════════
-function h(tag, attrs) {
-var children = Array.prototype.slice.call(arguments, 2);
-var el = document.createElement(tag);
-if (attrs) {
-Object.keys(attrs).forEach(function(k) {
-var v = attrs[k];
-if (k === “class”) el.className = v;
-else if (k.startsWith(“on”)) el[k.toLowerCase()] = v;
-else if (k === “style” && typeof v === “object”) Object.assign(el.style, v);
-else if (k === “checked” && tag === “input”) el.checked = v;
-else if (v !== null && v !== undefined && v !== false) el.setAttribute(k, v);
-});
-}
-children.flat(Infinity).forEach(function(c) {
-if (c == null || c === false) return;
-el.appendChild(typeof c === “string” ? document.createTextNode(c) : c);
-});
-return el;
-}
-function div(a) { return h.apply(null, [“div”].concat(Array.prototype.slice.call(arguments))); }
-function p(a)   { return h.apply(null, [“p”].concat(Array.prototype.slice.call(arguments))); }
-function span(a){ return h.apply(null, [“span”].concat(Array.prototype.slice.call(arguments))); }
-function btn(a) { return h.apply(null, [“button”].concat(Array.prototype.slice.call(arguments))); }
-function inp(a) { return h(“input”, a); }
-function sel(a) { return h.apply(null, [“select”].concat(Array.prototype.slice.call(arguments))); }
-function opt(v, t, selected) { return h(“option”, Object.assign({value:v}, selected ? {selected:“selected”} : {}), t); }
-function ta(a)  { return h.apply(null, [“textarea”].concat(Array.prototype.slice.call(arguments))); }
-function lbl(a) { return h.apply(null, [“label”].concat(Array.prototype.slice.call(arguments))); }
-
-function makeInp(attrs) { return inp(Object.assign({class:“inp”}, attrs || {})); }
-function makeSelect(val, options, onChange) {
-var el = sel({class:“inp”, onchange: function(e){ onChange(e.target.value); }});
-options.forEach(function(o){ el.appendChild(opt(o[0], o[1], o[0] === val)); });
-return el;
-}
-function makeLabel(text) { return lbl({class:“fl”}, text); }
-
-function checkbox(checked) {
-return div({class:“checkbox” + (checked ? “ checked” : “”)},
-checked ? span({style:{color:“white”,fontSize:“13px”,fontWeight:“700”,lineHeight:“1”}}, “✓”) : “”
-);
-}
-
-function ageBadge(item) {
-var age = getAge(item.fechaSubida, item.fechaActualizacion);
-return span({class:“age-badge”,style:{background:age.bg,color:age.color}}, age.icon + “ “ + age.label);
-}
-
-function discBadge(d) {
-return d ? span({class:“disc-badge”,style:{background:d.bg,color:d.color}}, d.label) : span({}, “”);
-}
-
-function score(item, q) {
-if (!q) return 1;
-var ql = q.toLowerCase();
-var s = 0;
-if (item.nombre.toLowerCase().startsWith(ql)) s += 10;
-else if (item.nombre.toLowerCase().includes(ql)) s += 6;
-if ((item.subpartida || “”).toLowerCase().includes(ql)) s += 4;
-if ((item.proveedor || “”).toLowerCase().includes(ql)) s += 2;
-if ((item.estado || “”).toLowerCase().includes(ql)) s += 2;
-if ((item.ciudad || “”).toLowerCase().includes(ql)) s += 2;
-if ((item.notas || “”).toLowerCase().includes(ql)) s += 1;
-var d = DISC.find(function(x){ return x.id === item.disciplina; });
-if (d && d.label.toLowerCase().includes(ql)) s += 3;
-return s;
-}
-
-function ageFilter(item) {
-if (S.filterAge === “all”) return true;
-var a = getAge(item.fechaSubida, item.fechaActualizacion);
-if (S.filterAge === “verde”)    return a.months !== null && a.months < 6;
-if (S.filterAge === “amarillo”) return a.months !== null && a.months >= 6 && a.months < 12;
-if (S.filterAge === “naranja”)  return a.months !== null && a.months >= 12 && a.months < 18;
-if (S.filterAge === “rojo”)     return a.months !== null && a.months >= 18;
-return true;
-}
-
-function getFiltered() {
-return S.items
-.filter(function(i){ return S.filterDisc === “all” || i.disciplina === S.filterDisc; })
-.filter(ageFilter)
-.filter(function(i){ return !S.search || score(i, S.search) > 0; })
-.sort(function(a, b){
-if (S.search) return score(b, S.search) - score(a, S.search);
-if (S.sortBy === “precio”) return Number(a.precio) - Number(b.precio);
-if (S.sortBy === “precioDesc”) return Number(b.precio) - Number(a.precio);
-if (S.sortBy === “fecha”) return (b.fechaSubida || “”).localeCompare(a.fechaSubida || “”);
-if (S.sortBy === “antiguedad”) return (a.fechaActualizacion || a.fechaSubida || “”).localeCompare(b.fechaActualizacion || b.fechaSubida || “”);
-return a.nombre.localeCompare(b.nombre);
-});
-}
-
-function exportCSV() {
-if (!S.items.length) { showToast(“No hay materiales”, “err”); return; }
-var headers = [“Nombre”,“Disciplina”,“Sub-Partida”,“Unidad”,“Precio”,“Proveedor”,“Estado”,“Ciudad”,“F.Cotizacion”,“F.Subida”,“F.Actualizacion”,“Notas”];
-var rows = S.items.map(function(i){
-return [i.nombre, (getDisc(i.disciplina) && getDisc(i.disciplina).label) || i.disciplina, i.subpartida||””, i.unidad, Number(i.precio).toFixed(2), i.proveedor||””, i.estado||””, i.ciudad||””, i.fecha||””, i.fechaSubida||””, i.fechaActualizacion||””, i.notas||””];
-});
-var csv = [headers].concat(rows).map(function(r){ return r.map(function(c){ return ‘”’ + String(c).replace(/”/g,’””’) + ‘”’; }).join(”,”); }).join(”\n”);
-var a = document.createElement(“a”);
-a.href = “data:text/csv;charset=utf-8,\uFEFF” + encodeURIComponent(csv);
-a.download = “Precios_” + today() + “.csv”;
-a.click();
-showToast(“Exportado ✓”);
-}
-
-function getEffPct(ci) {
-if (S.pctMode === “global”) return Number(S.globalPct) || 0;
-if (S.pctMode === “individual”) return Number(ci.pct) || 0;
-var g = S.cotGroups.find(function(g){ return g.id === ci.groupId; });
-return Number(g && g.pct) || 0;
-}
-
-function getResumenRows() {
-return S.cotItems.map(function(ci){
-var item = S.items.find(function(i){ return i.id === ci.itemId; });
-if (!item) return null;
-var cant = Number(ci.cantidad) || 1;
-var pct = getEffPct(ci);
-var precioU = Number(item.precio) || 0;
-var subtot = precioU * cant;
-var utilU = precioU * (pct / 100);
-var totalU = precioU + utilU;
-var utilTot = utilU * cant;
-var totalTot = totalU * cant;
-return {item:item,ci:ci,cant:cant,pct:pct,precioU:precioU,subtot:subtot,utilU:utilU,totalU:totalU,utilTot:utilTot,totalTot:totalTot};
-}).filter(Boolean);
-}
-
-function exportCotCSV() {
-var rows = getResumenRows();
-var grandSub   = rows.reduce(function(s,r){ return s+r.subtot; }, 0);
-var grandUtil  = rows.reduce(function(s,r){ return s+r.utilTot; }, 0);
-var grandTotal = rows.reduce(function(s,r){ return s+r.totalTot; }, 0);
-var headers = [”#”,“Material”,“Disciplina”,“Unidad”,“Cant.”,“P.Costo”,“Subtotal”,”% Util.”,“Utilidad”,“P.Venta”,“Total”];
-var data = rows.map(function(r, i){
-return [i+1, r.item.nombre, (getDisc(r.item.disciplina) && getDisc(r.item.disciplina).label) || r.item.disciplina, r.item.unidad, r.cant, r.precioU.toFixed(2), r.subtot.toFixed(2), r.pct+”%”, r.utilTot.toFixed(2), r.totalU.toFixed(2), r.totalTot.toFixed(2)];
-});
-data.push([]);
-data.push([””,””,””,””,””,“SUBTOTAL”,grandSub.toFixed(2),””,“UTILIDAD”,“TOTAL VENTA”,grandTotal.toFixed(2)]);
-var csv = [headers].concat(data).map(function(r){ return r.map(function(c){ return ‘”’ + String(c).replace(/”/g,’””’) + ‘”’; }).join(”,”); }).join(”\n”);
-var a = document.createElement(“a”);
-a.href = “data:text/csv;charset=utf-8,\uFEFF” + encodeURIComponent(csv);
-a.download = “Cotizacion_” + (S.cotNombre || “Nueva”) + “_” + today() + “.csv”;
-a.click();
-showToast(“Cotizacion exportada ✓”);
-}
-
-// ══════════════════════════════════════════════
-// RENDER — LOGIN
-// ══════════════════════════════════════════════
-function renderLogin() {
-var wrap = div({class:“login-wrap”});
-var box = div({class:“login-box”});
-box.appendChild(div({style:{textAlign:“center”,marginBottom:“24px”}},
-h(“div”,{style:{fontSize:“48px”,marginBottom:“8px”}}, “📋”),
-h(“h1”,{style:{fontSize:“22px”,fontWeight:“800”,color:”#1E293B”,margin:“0 0 4px”}}, “Base de Precios”),
-h(“p”,{style:{color:”#64748B”,fontSize:“14px”,margin:0}}, “Inicia sesion para continuar”)
-));
-var emailInp = inp({class:“inp”,type:“email”,placeholder:“Correo electronico”,style:{marginBottom:“12px”,fontSize:“16px”}});
-var passInp  = inp({class:“inp”,type:“password”,placeholder:“Contrasena”,style:{marginBottom:“8px”,fontSize:“16px”}});
-var errDiv   = div({style:{color:”#EF4444”,fontSize:“13px”,minHeight:“20px”,marginBottom:“12px”,textAlign:“center”}});
-var loginBtn = btn({class:“btn-primary”,style:{width:“100%”,padding:“13px”,fontSize:“15px”},
-onclick:function(){
-var e=emailInp.value.trim(), pw=passInp.value;
-if(!e||!pw){errDiv.textContent=“Ingresa correo y contrasena”;return;}
-loginBtn.textContent=“Entrando…”; loginBtn.disabled=true;
-doLogin(e,pw,function(msg){
-errDiv.textContent=msg.replace(“Firebase:”,””).replace(/(auth.*)/,””).trim();
-loginBtn.textContent=“Entrar”; loginBtn.disabled=false;
-});
-}
-}, “Entrar”);
-box.appendChild(emailInp); box.appendChild(passInp); box.appendChild(errDiv); box.appendChild(loginBtn);
-wrap.appendChild(box);
-return wrap;
-}
-
-// ══════════════════════════════════════════════
-// RENDER — IDLE WARNING OVERLAY
-// ══════════════════════════════════════════════
-function renderIdleWarning() {
-var bg = div({class:“idle-modal-bg”});
-var m  = div({class:“idle-modal”});
-
-m.appendChild(div({style:{fontSize:“44px”,marginBottom:“6px”}}, “⏳”));
-m.appendChild(h(“h2”,{style:{margin:“0 0 6px”,fontSize:“18px”,fontWeight:“800”,color:”#1E293B”}}, “¿Sigues ahi?”));
-m.appendChild(p({style:{margin:“0 0 4px”,fontSize:“13px”,color:”#64748B”}}, “Tu sesion se cerrara automaticamente en:”));
-
-m.appendChild(div({id:“idle-num”,class:“idle-countdown”}, String(idleCountdown)));
-
-var barWrap = div({class:“idle-bar-wrap”});
-barWrap.appendChild(div({id:“idle-bar”,class:“idle-bar”,style:{width:“100%”}}));
-m.appendChild(barWrap);
-
-m.appendChild(p({style:{margin:“0 0 20px”,fontSize:“12px”,color:”#94A3B8”}}, “segundos de inactividad”));
-
-var continuarBtn = btn({class:“btn-primary”,style:{width:“100%”,padding:“13px”,fontSize:“15px”,marginBottom:“10px”},
-onclick: dismissIdleWarning
-}, “✋ Continuar sesion”);
-var cerrarBtn = btn({class:“btn-secondary”,style:{width:“100%”,padding:“11px”,fontSize:“14px”},
-onclick: performAutoLogout
-}, “Cerrar sesion ahora”);
-
-m.appendChild(continuarBtn);
-m.appendChild(cerrarBtn);
-bg.appendChild(m);
-return bg;
-}
-
-// ══════════════════════════════════════════════
-// RENDER — ITEM CARD
-// ══════════════════════════════════════════════
+// ══════════════════════════════
+// RENDER SECTIONS
+// ══════════════════════════════
 function renderItemCard(item) {
 var d = getDisc(item.disciplina);
 var age = getAge(item.fechaSubida, item.fechaActualizacion);
 var isOld = (age.months || 0) >= 12;
 var card = div({class:“item-card”, style:{border:“1.5px solid “ + (isOld ? “#FECACA” : “#F1F5F9”)}});
-
 var main = div({style:{padding:“14px 16px”,display:“flex”,alignItems:“center”,gap:“12px”,flexWrap:“wrap”}});
 if (d) main.appendChild(div({style:{width:“42px”,height:“42px”,borderRadius:“10px”,background:d.bg,display:“flex”,alignItems:“center”,justifyContent:“center”,fontSize:“20px”,flexShrink:“0”}}, d.icon));
-
 var info = div({style:{flex:“1”,minWidth:“160px”}});
 info.appendChild(p({style:{margin:0,fontWeight:“700”,fontSize:“14px”,color:”#1E293B”}}, item.nombre));
-
 var tags = div({style:{display:“flex”,gap:“6px”,marginTop:“3px”,flexWrap:“wrap”,alignItems:“center”}});
 if (d) tags.appendChild(discBadge(d));
 if (item.subpartida) tags.appendChild(span({style:{fontSize:“11px”,color:”#64748B”}}, “· “ + item.subpartida));
-if (item.proveedor)  tags.appendChild(span({style:{fontSize:“11px”,color:”#94A3B8”}}, “· “ + item.proveedor));
+if (item.proveedor) tags.appendChild(span({style:{fontSize:“11px”,color:”#94A3B8”}}, “· “ + item.proveedor));
 info.appendChild(tags);
-
 var tags2 = div({style:{display:“flex”,gap:“8px”,marginTop:“4px”,flexWrap:“wrap”,alignItems:“center”}});
 var loc = [item.ciudad, item.estado].filter(Boolean).join(”, “);
 if (loc) tags2.appendChild(span({class:“loc-tag”}, “📍 “ + loc));
 tags2.appendChild(ageBadge(item));
-if (item.fechaSubida)         tags2.appendChild(span({class:“date-tag”}, “Subido: “ + item.fechaSubida));
-if (item.fechaActualizacion)  tags2.appendChild(span({class:“upd-tag”}, “Actualizado: “ + item.fechaActualizacion));
+if (item.fechaSubida) tags2.appendChild(span({class:“date-tag”}, “Subido: “ + item.fechaSubida));
+if (item.fechaActualizacion) tags2.appendChild(span({class:“upd-tag”}, “Actualizado: “ + item.fechaActualizacion));
 info.appendChild(tags2);
 if (item.notas) info.appendChild(p({style:{margin:“3px 0 0”,fontSize:“12px”,color:”#94A3B8”}}, item.notas));
 main.appendChild(info);
-
 var priceDiv = div({style:{textAlign:“right”,flexShrink:“0”}});
 priceDiv.appendChild(p({style:{margin:0,fontWeight:“700”,fontSize:“17px”}}, fmt(item.precio)));
 priceDiv.appendChild(p({style:{margin:“1px 0 0”,fontSize:“12px”,color:”#94A3B8”}}, “por “ + item.unidad));
 main.appendChild(priceDiv);
-
 var actions = div({style:{display:“flex”,gap:“6px”,flexShrink:“0”}});
 var fichaItem = fichas[item.id];
 if(fichaItem) {
-actions.appendChild(btn({style:{background:”#F5F3FF”,border:“none”,color:”#7C3AED”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+var fBtn = btn({style:{background:”#F5F3FF”,border:“none”,color:”#7C3AED”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”,title:“Ver ficha tecnica”},
 onclick:function(){ var a=document.createElement(“a”); a.href=fichaItem.data; a.download=fichaItem.nombre; a.click(); }
-}, “📄”));
+}, “📄”);
+actions.appendChild(fBtn);
 }
-actions.appendChild(btn({style:{background:isOld?”#FEF2F2”:”#F1F5F9”,border:“none”,color:isOld?”#EF4444”:”#64748B”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+var qBtn = btn({style:{background:isOld?”#FEF2F2”:”#F1F5F9”,border:“none”,color:isOld?”#EF4444”:”#64748B”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
 onclick: function(){ setState({quickEditId:item.id, quickEditVal:item.precio}); }
-}, “💲”));
-actions.appendChild(btn({style:{background:”#EFF6FF”,border:“none”,color:”#3B82F6”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+}, “💲”);
+var eBtn = btn({style:{background:”#EFF6FF”,border:“none”,color:”#3B82F6”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
 onclick: function(){ setState({view:“agregar”, editItem:item, form:Object.assign({},item)}); }
-}, “✏️”));
-actions.appendChild(btn({style:{background:”#FEF2F2”,border:“none”,color:”#EF4444”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
+}, “✏️”);
+var dBtn = btn({style:{background:”#FEF2F2”,border:“none”,color:”#EF4444”,width:“34px”,height:“34px”,borderRadius:“8px”,fontSize:“15px”,display:“flex”,alignItems:“center”,justifyContent:“center”},
 onclick: function(){ setState({confirmDel:item.id}); }
-}, “🗑️”));
+}, “🗑️”);
+actions.appendChild(qBtn); actions.appendChild(eBtn); actions.appendChild(dBtn);
 main.appendChild(actions);
 card.appendChild(main);
-
 if (S.quickEditId === item.id) {
 var panel = div({style:{padding:“12px 16px”,borderTop:“2px solid “+age.bg,background:age.bg,display:“flex”,alignItems:“center”,gap:“10px”,flexWrap:“wrap”}});
 panel.appendChild(span({style:{fontSize:“18px”}}, age.icon));
@@ -762,22 +539,17 @@ persist(S.items.map(function(i){ return i.id === item.id ? Object.assign({},i,{p
 setState({quickEditId:null});
 showToast(“Precio actualizado ✓”);
 }}, “✓”));
-row.appendChild(btn({style:{background:“none”,border:“none”,color:”#94A3B8”,fontSize:“20px”,padding:“0 4px”}, onclick:function(){ setState({quickEditId:null}); }}, “×”));
+row.appendChild(btn({style:{background:“none”,border:“none”,color:”#94A3B8”,fontSize:“20px”,padding:“0 4px”}, onclick:function(){ setState({quickEditId:null}); }}, “x”));
 panel.appendChild(row);
 card.appendChild(panel);
 }
 return card;
 }
-
-// ══════════════════════════════════════════════
-// RENDER — CATALOGO
-// ══════════════════════════════════════════════
 function renderCatalogo() {
 var items = S.items;
 var alertCount = items.filter(function(i){ return (getAge(i.fechaSubida,i.fechaActualizacion).months || 0) >= 12; }).length;
 var filtered = getFiltered();
 var wrap = div({});
-
 if (alertCount > 0) {
 var banner = div({style:{background:”#FEF2F2”,border:“1px solid #FECACA”,borderRadius:“12px”,padding:“12px 16px”,marginBottom:“14px”,display:“flex”,alignItems:“center”,gap:“10px”}});
 banner.appendChild(span({style:{fontSize:“20px”}}, “🔴”));
@@ -788,7 +560,6 @@ banner.appendChild(bt);
 banner.appendChild(btn({style:{background:”#DC2626”,color:“white”,border:“none”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,fontWeight:“600”}, onclick:function(){ setState({filterAge:“rojo”}); }}, “Ver”));
 wrap.appendChild(banner);
 }
-
 var fb = div({class:“filter-bar”});
 var row1 = div({style:{display:“flex”,gap:“8px”,flexWrap:“wrap”,alignItems:“center”,marginBottom:“10px”}});
 var si = inp({type:“text”,class:“inp”,placeholder:“🔍 Buscar material, ciudad…”,value:S.search,style:{flex:“1 1 160px”,minWidth:“140px”}, oninput:function(e){ setState({search:e.target.value}); }});
@@ -798,7 +569,6 @@ discSel.style.flex = “1 1 120px”; row1.appendChild(discSel);
 var sortSel = makeSelect(S.sortBy, [[“nombre”,“A-Z”],[“precio”,“Precio ↑”],[“precioDesc”,“Precio ↓”],[“fecha”,“Mas reciente”],[“antiguedad”,“Mas antiguo”]], function(v){ setState({sortBy:v}); });
 sortSel.style.flex = “1 1 100px”; row1.appendChild(sortSel);
 fb.appendChild(row1);
-
 var row2 = div({style:{display:“flex”,gap:“6px”,flexWrap:“wrap”,alignItems:“center”}});
 row2.appendChild(span({style:{fontSize:“11px”,color:”#94A3B8”,marginRight:“4px”}}, “Antiguedad:”));
 [[“all”,“Todos”,”#475569”,”#F1F5F9”],[“verde”,“🟢 <6m”,”#059669”,”#D1FAE5”],[“amarillo”,“🟡 6-12m”,”#D97706”,”#FEF3C7”],[“naranja”,“🟠 12-18m”,”#EA580C”,”#FFEDD5”],[“rojo”,“🔴 +18m”,”#DC2626”,”#FEE2E2”]].forEach(function(x){
@@ -808,7 +578,6 @@ row2.appendChild(btn({class:“age-chip”,style:{background:active?color:bg,col
 });
 fb.appendChild(row2);
 wrap.appendChild(fb);
-
 if (!items.length) {
 var e = div({class:“empty”});
 e.appendChild(div({style:{fontSize:“52px”,marginBottom:“14px”}}, “📋”));
@@ -828,21 +597,18 @@ wrap.appendChild(p({style:{color:”#64748B”,fontSize:“13px”,margin:“0 0
 filtered.forEach(function(item){ wrap.appendChild(renderItemCard(item)); });
 return wrap;
 }
-
-// ══════════════════════════════════════════════
-// RENDER — BUSQUEDA
-// ══════════════════════════════════════════════
+// Highlight matching text in a string
 function highlightText(text, query) {
 if (!query) return document.createTextNode(text);
 var idx = text.toLowerCase().indexOf(query.toLowerCase());
 if (idx === -1) return document.createTextNode(text);
 var frag = document.createDocumentFragment();
 if (idx > 0) frag.appendChild(document.createTextNode(text.slice(0, idx)));
-frag.appendChild(h(“mark”, {style:{background:”#FEF08A”,color:”#1E293B”,borderRadius:“3px”,padding:“0 2px”}}, text.slice(idx, idx+query.length)));
+var mark = h(“mark”, {style:{background:”#FEF08A”,color:”#1E293B”,borderRadius:“3px”,padding:“0 2px”}}, text.slice(idx, idx+query.length));
+frag.appendChild(mark);
 if (idx + query.length < text.length) frag.appendChild(document.createTextNode(text.slice(idx+query.length)));
 return frag;
 }
-
 function renderBusquedaResults(container, query) {
 container.innerHTML = “”;
 var filtered = S.items
@@ -852,7 +618,6 @@ var filtered = S.items
 if (query) return score(b,query)-score(a,query);
 return a.nombre.localeCompare(b.nombre);
 });
-
 if (!query && S.filterDisc === “all”) {
 var e = div({style:{textAlign:“center”,padding:“52px 24px”,color:”#94A3B8”}});
 e.appendChild(div({style:{fontSize:“52px”,marginBottom:“14px”}}, “🔍”));
@@ -882,10 +647,12 @@ renderBusquedaResults(container,””);
 }}, “Limpiar”));
 container.appendChild(e2); return;
 }
-container.appendChild(p({style:{color:”#64748B”,fontSize:“13px”,margin:“0 0 10px”}},
-filtered.length + “ resultado” + (filtered.length!==1?“s”:””) + (query?’ para “’+query+’”’:””)));
+var countEl = p({style:{color:”#64748B”,fontSize:“13px”,margin:“0 0 10px”}},
+filtered.length + “ resultado” + (filtered.length!==1?“s”:””) + (query?’ para “’+query+’”’:””));
+container.appendChild(countEl);
 filtered.forEach(function(item){
 var card = renderItemCard(item);
+// Highlight nombre
 if (query) {
 var nombreEl = card.querySelector && card.querySelector(“p”);
 if (nombreEl && nombreEl.textContent === item.nombre) {
@@ -896,7 +663,6 @@ nombreEl.appendChild(highlightText(item.nombre, query));
 container.appendChild(card);
 });
 }
-
 function renderBusqueda() {
 var wrap = div({});
 var box = div({style:{background:“white”,borderRadius:“16px”,padding:“20px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“16px”}});
@@ -915,61 +681,73 @@ DISC.filter(function(d){ return S.items.some(function(i){ return i.disciplina ==
 discOpts.forEach(function(x){
 var id=x[0],label=x[1],color=x[2],bg=x[3];
 var active = S.filterDisc === id;
-chips.appendChild(btn({style:{padding:“5px 12px”,borderRadius:“20px”,border:“none”,fontSize:“12px”,fontWeight:“600”,background:active?color:bg,color:active?“white”:color},
+var chipBtn = btn({style:{padding:“5px 12px”,borderRadius:“20px”,border:“none”,fontSize:“12px”,fontWeight:“600”,background:active?color:bg,color:active?“white”:color},
 onclick:function(){
 S.filterDisc = id;
+// Update chip styles
 chips.querySelectorAll && chips.querySelectorAll(“button”).forEach(function(b,bi){
-var o = discOpts[bi];
-b.style.background = (S.filterDisc===o[0]) ? o[2] : o[3];
-b.style.color = (S.filterDisc===o[0]) ? “white” : o[2];
+var opt = discOpts[bi];
+b.style.background = (S.filterDisc===opt[0]) ? opt[2] : opt[3];
+b.style.color = (S.filterDisc===opt[0]) ? “white” : opt[2];
 });
 renderBusquedaResults(resultsContainer, S.search);
 }
-}, label));
+}, label);
+chips.appendChild(chipBtn);
 });
-box.appendChild(chips); wrap.appendChild(box);
+box.appendChild(chips);
+wrap.appendChild(box);
 var resultsContainer = div({id:“buscar-results”});
 wrap.appendChild(resultsContainer);
 renderBusquedaResults(resultsContainer, S.search);
+// Auto-focus search input after render
 setTimeout(function(){
 var el = document.getElementById(“buscar-input”);
 if(el && S.view === “buscar”) el.focus();
 }, 50);
 return wrap;
 }
-
-// ══════════════════════════════════════════════
-// RENDER — ESCANEAR
-// ══════════════════════════════════════════════
 function renderEscanear() {
 var wrap = div({});
-
 if (S.scanStep === “idle”) {
 var box = div({style:{background:“white”,borderRadius:“14px”,padding:“18px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”}});
 box.appendChild(h(“h2”,{style:{margin:“0 0 6px”,fontSize:“17px”}}, “📷 Escanear Cotizacion”));
 box.appendChild(p({style:{margin:“0 0 16px”,color:”#64748B”,fontSize:“13px”}}, “Sube una foto o PDF y la IA extrae los materiales y precios automaticamente.”));
-var locBox = div({style:{background:”#F8FAFC”,borderRadius:“10px”,padding:“14px 16px”,marginBottom:“16px”,border:“1.5px solid #E2E8F0”}});
-locBox.appendChild(p({style:{margin:“0 0 10px”,fontSize:“12px”,fontWeight:“700”,color:”#475569”,textTransform:“uppercase”,letterSpacing:”.05em”}}, “📍 Ubicacion del documento (opcional)”));
-var locGrid = div({class:“grid2”});
-var lEstado = div({}); lEstado.appendChild(makeLabel(“Estado”));
-lEstado.appendChild(makeSelect(S.scanLoc.estado, [[””,“Sin especificar”]].concat(ESTADOS.map(function(s){ return [s,s]; })), function(v){ S.scanLoc = Object.assign({},S.scanLoc,{estado:v}); }));
-locGrid.appendChild(lEstado);
-var lCiudad = div({}); lCiudad.appendChild(makeLabel(“Ciudad”));
-lCiudad.appendChild(inp({class:“inp”,type:“text”,placeholder:“Ej: Monterrey”,value:S.scanLoc.ciudad, oninput:function(e){ S.scanLoc = Object.assign({},S.scanLoc,{ciudad:e.target.value}); }}));
-locGrid.appendChild(lCiudad); locBox.appendChild(locGrid); box.appendChild(locBox);
-var drop = div({class:“scan-drop”, onclick:function(){ fileInputEl.click(); }});
-drop.appendChild(div({style:{fontSize:“52px”,marginBottom:“12px”}}, “📄”));
-drop.appendChild(p({style:{fontWeight:“700”,color:”#334155”,fontSize:“16px”,marginBottom:“6px”}}, “Toca para subir archivo”));
-drop.appendChild(p({style:{color:”#94A3B8”,fontSize:“13px”}}, “JPG, PNG o PDF · Camara o Galeria”));
+
+var locBox = div({style:{background:"#F8FAFC",borderRadius:"10px",padding:"14px 16px",marginBottom:"16px",border:"1.5px solid #E2E8F0"}});
+locBox.appendChild(p({style:{margin:"0 0 10px",fontSize:"12px",fontWeight:"700",color:"#475569",textTransform:"uppercase",letterSpacing:".05em"}}, "📍 Ubicacion del documento (opcional)"));
+var locGrid = div({class:"grid2"});
+var lEstado = div({});
+lEstado.appendChild(makeLabel("Estado"));
+var esSel = makeSelect(S.scanLoc.estado, [["","Sin especificar"]].concat(ESTADOS.map(function(s){ return [s,s]; })), function(v){ S.scanLoc = Object.assign({},S.scanLoc,{estado:v}); });
+lEstado.appendChild(esSel); locGrid.appendChild(lEstado);
+var lCiudad = div({});
+lCiudad.appendChild(makeLabel("Ciudad"));
+var ciInp = inp({class:"inp",type:"text",placeholder:"Ej: Monterrey",value:S.scanLoc.ciudad, oninput:function(e){ S.scanLoc = Object.assign({},S.scanLoc,{ciudad:e.target.value}); }});
+lCiudad.appendChild(ciInp); locGrid.appendChild(lCiudad);
+locBox.appendChild(locGrid); box.appendChild(locBox);
+
+// Drop zone triggers shared file input
+var drop = div({class:"scan-drop", onclick:function(){ fileInputEl.click(); }});
+drop.appendChild(div({style:{fontSize:"52px",marginBottom:"12px"}}, "📄"));
+drop.appendChild(p({style:{fontWeight:"700",color:"#334155",fontSize:"16px",marginBottom:"6px"}}, "Toca para subir archivo"));
+drop.appendChild(p({style:{color:"#94A3B8",fontSize:"13px"}}, "JPG, PNG o PDF · Camara o Galeria"));
 box.appendChild(drop);
-box.appendChild(btn({style:{display:“block”,width:“100%”,marginTop:“10px”,background:”#F1F5F9”,border:“1.5px solid #E2E8F0”,color:”#475569”,padding:“11px”,borderRadius:“10px”,fontSize:“13px”,fontWeight:“600”},
-onclick:function(){
-fileInputEl.removeAttribute(“capture”); fileInputEl.click();
-setTimeout(function(){ fileInputEl.setAttribute(“capture”,“environment”); }, 500);
-}
-}, “🖼️ Elegir desde galeria”));
-if (S.scanErr) box.appendChild(div({style:{marginTop:“14px”,background:”#FEF2F2”,border:“1px solid #FECACA”,borderRadius:“10px”,padding:“12px 16px”,color:”#DC2626”,fontSize:“13px”}}, “⚠️ “ + S.scanErr));
+
+// Also offer gallery-specific button for iOS
+var galBtn = btn({style:{display:"block",width:"100%",marginTop:"10px",background:"#F1F5F9",border:"1.5px solid #E2E8F0",color:"#475569",padding:"11px",borderRadius:"10px",fontSize:"13px",fontWeight:"600"},
+  onclick:function(){
+    fileInputEl.removeAttribute("capture");
+    fileInputEl.click();
+    setTimeout(function(){ fileInputEl.setAttribute("capture","environment"); }, 500);
+  }
+}, "🖼️ Elegir desde galeria");
+box.appendChild(galBtn);
+
+if (S.scanErr) box.appendChild(div({style:{marginTop:"14px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"10px",padding:"12px 16px",color:"#DC2626",fontSize:"13px"}}, "⚠️ " + S.scanErr));
 wrap.appendChild(box);
+
+
 }
 else if (S.scanStep === “scanning”) {
 var box2 = div({style:{background:“white”,borderRadius:“16px”,padding:“48px”,textAlign:“center”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”}});
@@ -997,9 +775,9 @@ var s = {}; S.scanResults.forEach(function(r){ s[r._id] = true; }); setState({sc
 }}, “✓ Todos”));
 hbts.appendChild(btn({style:{background:”#F1F5F9”,border:“none”,color:”#64748B”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”}, onclick:function(){ setState({scanSel:{}}); }}, “Ninguno”));
 hbts.appendChild(btn({style:{background:”#F1F5F9”,border:“none”,color:”#64748B”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,marginLeft:“auto”}, onclick:function(){ setState({scanStep:“idle”,scanResults:[],scanPreview:null}); }}, “↩ Nuevo archivo”));
-header.appendChild(hbts); wrap.appendChild(header);
+header.appendChild(hbts);
+wrap.appendChild(header);
 
-```
 S.scanResults.forEach(function(raw){
   var item = Object.assign({}, raw, S.scanEdits[raw._id] || {});
   var d = getDisc(item.disciplina);
@@ -1021,6 +799,7 @@ S.scanResults.forEach(function(raw){
   iPrice.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"15px"}}, fmt(item.precio)));
   iPrice.appendChild(p({style:{margin:0,fontSize:"11px",color:"#94A3B8"}}, "/" + item.unidad));
   top.appendChild(iPrice); card.appendChild(top);
+
   if (isSel) {
     var edit = div({style:{padding:"14px 16px",borderTop:"1px solid #DBEAFE",background:"#F8FBFF"}});
     edit.appendChild(p({style:{margin:"0 0 10px",fontSize:"11px",fontWeight:"700",color:"#3B82F6",textTransform:"uppercase"}}, "✏️ Editar antes de guardar"));
@@ -1069,44 +848,42 @@ bar.appendChild(btn({class:"btn-green", onclick:function(){
   setState({view:"catalogo"});
 }}, "Guardar ✓"));
 wrap.appendChild(bar);
-```
+
 
 }
 return wrap;
 }
-
-// ══════════════════════════════════════════════
-// RENDER — FORMULARIO
-// ══════════════════════════════════════════════
 function renderForm() {
 var isEdit = !!S.editItem;
 var wrap = div({style:{background:“white”,borderRadius:“16px”,padding:“24px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”}});
 wrap.appendChild(h(“h2”,{style:{margin:“0 0 20px”,fontSize:“17px”}}, isEdit ? “✏️ Editar Material” : “➕ Nuevo Material”));
 var g = div({class:“grid2”});
-
 function field(label, key, type, options, cls) {
 type = type || “text”; cls = cls || “”;
-var fd = div({class:cls}); fd.appendChild(makeLabel(label));
+var fd = div({class:cls});
+fd.appendChild(makeLabel(label));
 if (options) {
-fd.appendChild(makeSelect(S.form[key] || “”, options, function(v){ S.form = Object.assign({},S.form); S.form[key] = v; }));
+var s = makeSelect(S.form[key] || “”, options, function(v){ S.form = Object.assign({},S.form); S.form[key] = v; });
+fd.appendChild(s);
 } else if (type === “textarea”) {
-fd.appendChild(ta({class:“inp”,rows:“3”,style:{resize:“vertical”,lineHeight:“1.5”}, oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }}, S.form[key] || “”));
+var t = ta({class:“inp”,rows:“3”,style:{resize:“vertical”,lineHeight:“1.5”}, oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }}, S.form[key] || “”);
+fd.appendChild(t);
 } else {
-fd.appendChild(inp({class:“inp”,type:type,value:String(S.form[key]||””), oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }}));
+var i2 = inp({class:“inp”,type:type,value:String(S.form[key]||””), oninput:function(e){ S.form = Object.assign({},S.form); S.form[key] = e.target.value; }});
+fd.appendChild(i2);
 }
 g.appendChild(fd);
 }
-
 field(“Nombre / Nombre comercial *”,“nombre”,“text”,null,“span2”);
 field(“Disciplina *”,“disciplina”,“text”,[[””,“Seleccionar…”]].concat(DISC.map(function(d){ return [d.id, d.icon+” “+d.label]; })));
 field(“Sub-Partida”,“subpartida”);
 field(“Unidad”,“unidad”,“text”,UNIDADES.map(function(u){ return [u,u]; }));
 field(“Fecha de cotizacion”,“fecha”,“date”);
-
+// IVA section
 var ivaDiv = div({class:“span2”,style:{borderTop:“1px solid #E2E8F0”,paddingTop:“14px”,marginTop:“4px”}});
 ivaDiv.appendChild(p({style:{margin:“0 0 10px”,fontSize:“12px”,fontWeight:“700”,color:”#F59E0B”,textTransform:“uppercase”,letterSpacing:”.05em”}}, “💰 Precios (IVA 16%)”));
 g.appendChild(ivaDiv);
-
+// Subtotal field
 var sfDiv = div({});
 sfDiv.appendChild(makeLabel(“Subtotal (sin IVA) *”));
 var subWrap = div({style:{position:“relative”}});
@@ -1114,30 +891,39 @@ subWrap.appendChild(span({style:{position:“absolute”,left:“11px”,top:“
 var subInp = inp({class:“inp”,type:“number”,value:String(S.form.subtotal||””),placeholder:“0.00”,style:{paddingLeft:“26px”}, oninput:function(e){
 var c = calcFromSubtotal(e.target.value);
 S.form = Object.assign({},S.form,{subtotal:c.subtotal,iva:c.iva,total:c.total,precio:c.subtotal});
-var ivaEl = document.getElementById(“f-iva”); var totEl = document.getElementById(“f-total”);
-if(ivaEl) ivaEl.value = c.iva; if(totEl) totEl.value = c.total;
+var ivaEl = document.getElementById(“f-iva”);
+var totEl = document.getElementById(“f-total”);
+if(ivaEl) ivaEl.value = c.iva;
+if(totEl) totEl.value = c.total;
 }});
 subWrap.appendChild(subInp); sfDiv.appendChild(subWrap); g.appendChild(sfDiv);
-
+// IVA field (readonly)
 var iDiv = div({});
 iDiv.appendChild(makeLabel(“IVA (16%)”));
 var iWrap = div({style:{position:“relative”}});
 iWrap.appendChild(span({style:{position:“absolute”,left:“11px”,top:“50%”,transform:“translateY(-50%)”,color:”#94A3B8”,fontWeight:“600”}}, “$”));
-iWrap.appendChild(inp({id:“f-iva”,class:“inp”,type:“number”,value:String(S.form.iva||””),placeholder:“0.00”,style:{paddingLeft:“26px”,background:”#F1F5F9”,color:”#94A3B8”}, oninput:function(e){ S.form = Object.assign({},S.form,{iva:e.target.value}); }}));
-iDiv.appendChild(iWrap); g.appendChild(iDiv);
-
+var ivaInp = inp({id:“f-iva”,class:“inp”,type:“number”,value:String(S.form.iva||””),placeholder:“0.00”,style:{paddingLeft:“26px”,background:”#F1F5F9”,color:”#94A3B8”},
+oninput:function(e){ S.form = Object.assign({},S.form,{iva:e.target.value}); }
+});
+iWrap.appendChild(ivaInp); iDiv.appendChild(iWrap); g.appendChild(iDiv);
+// Total field
 var tDiv = div({});
 tDiv.appendChild(makeLabel(“Total (con IVA)”));
 var tWrap = div({style:{position:“relative”}});
 tWrap.appendChild(span({style:{position:“absolute”,left:“11px”,top:“50%”,transform:“translateY(-50%)”,color:”#059669”,fontWeight:“700”}}, “$”));
-tWrap.appendChild(inp({id:“f-total”,class:“inp”,type:“number”,value:String(S.form.total||””),placeholder:“0.00”,style:{paddingLeft:“26px”,fontWeight:“700”,color:”#059669”}, oninput:function(e){
+var totInp = inp({id:“f-total”,class:“inp”,type:“number”,value:String(S.form.total||””),placeholder:“0.00”,style:{paddingLeft:“26px”,fontWeight:“700”,color:”#059669”},
+oninput:function(e){
 var c = calcFromTotal(e.target.value);
 S.form = Object.assign({},S.form,{subtotal:c.subtotal,iva:c.iva,total:c.total,precio:c.subtotal});
-subInp.value = c.subtotal; var ivaEl = document.getElementById(“f-iva”); if(ivaEl) ivaEl.value = c.iva;
-}}));
-tDiv.appendChild(tWrap); g.appendChild(tDiv);
-
-var pDiv = div({class:“span2”}); pDiv.appendChild(makeLabel(“Proveedor”));
+subInp.value = c.subtotal;
+var ivaEl = document.getElementById(“f-iva”);
+if(ivaEl) ivaEl.value = c.iva;
+}
+});
+tWrap.appendChild(totInp); tDiv.appendChild(tWrap); g.appendChild(tDiv);
+// Proveedor with autocomplete
+var pDiv = div({class:“span2”});
+pDiv.appendChild(makeLabel(“Proveedor”));
 var pWrap = div({style:{position:“relative”}});
 var pInp = inp({class:“inp”,type:“text”,value:String(S.form.proveedor||””),placeholder:“Nombre del proveedor”,
 oninput:function(e){
@@ -1145,21 +931,28 @@ S.form = Object.assign({},S.form,{proveedor:e.target.value});
 var q = e.target.value.toLowerCase();
 var suggestions = getProveedores().filter(function(p){ return p.toLowerCase().startsWith(q) && p !== e.target.value; });
 var dd = document.getElementById(“prov-dd”);
-if(dd){ dd.innerHTML=””; if(suggestions.length && q.length>0){ suggestions.slice(0,5).forEach(function(s){ var o=div({style:{padding:“10px 14px”,cursor:“pointer”,borderBottom:“1px solid #F1F5F9”,fontSize:“13px”}},s); o.onmousedown=o.ontouchstart=function(ev){ev.preventDefault();S.form=Object.assign({},S.form,{proveedor:s});pInp.value=s;dd.innerHTML=””;}; dd.appendChild(o); }); dd.style.display=“block”; } else {dd.style.display=“none”;}}
+if(dd) { dd.innerHTML=””; if(suggestions.length && q.length>0){
+suggestions.slice(0,5).forEach(function(s){
+var opt = div({style:{padding:“10px 14px”,cursor:“pointer”,borderBottom:“1px solid #F1F5F9”,fontSize:“13px”}}, s);
+opt.onmousedown = opt.ontouchstart = function(ev){ ev.preventDefault(); S.form=Object.assign({},S.form,{proveedor:s}); pInp.value=s; dd.innerHTML=””; };
+dd.appendChild(opt);
+});
+dd.style.display=“block”;
+} else { dd.style.display=“none”; }}
 },
 onblur:function(){ setTimeout(function(){ var dd=document.getElementById(“prov-dd”); if(dd) dd.style.display=“none”; },200); }
 });
 pWrap.appendChild(pInp);
-pWrap.appendChild(div({id:“prov-dd”,style:{display:“none”,position:“absolute”,top:“100%”,left:0,right:0,background:“white”,border:“1.5px solid #BFDBFE”,borderRadius:“8px”,zIndex:“200”,boxShadow:“0 4px 16px rgba(0,0,0,.1)”,maxHeight:“180px”,overflowY:“auto”}}));
+var provDd = div({id:“prov-dd”,style:{display:“none”,position:“absolute”,top:“100%”,left:0,right:0,background:“white”,border:“1.5px solid #BFDBFE”,borderRadius:“8px”,zIndex:“200”,boxShadow:“0 4px 16px rgba(0,0,0,.1)”,maxHeight:“180px”,overflowY:“auto”}});
+pWrap.appendChild(provDd);
 pDiv.appendChild(pWrap); g.appendChild(pDiv);
-
 var locDiv = div({class:“span2”,style:{borderTop:“1px solid #E2E8F0”,paddingTop:“14px”,marginTop:“4px”}});
 locDiv.appendChild(p({style:{margin:“0 0 10px”,fontSize:“12px”,fontWeight:“700”,color:”#06B6D4”,textTransform:“uppercase”,letterSpacing:”.05em”}}, “📍 Ubicacion del costo”));
 g.appendChild(locDiv);
 field(“Estado”,“estado”,“text”,[[””,“Sin especificar”]].concat(ESTADOS.map(function(s){ return [s,s]; })));
 field(“Ciudad”,“ciudad”);
 field(“Notas / Especificaciones tecnicas”,“notas”,“textarea”,null,“span2”);
-
+// Ficha tecnica PDF
 var fichaDiv = div({class:“span2”,style:{borderTop:“1px solid #E2E8F0”,paddingTop:“14px”,marginTop:“4px”}});
 fichaDiv.appendChild(p({style:{margin:“0 0 10px”,fontSize:“12px”,fontWeight:“700”,color:”#7C3AED”,textTransform:“uppercase”,letterSpacing:”.05em”}}, “📄 Ficha Tecnica (PDF)”));
 var fichaId = isEdit ? S.editItem.id : null;
@@ -1171,13 +964,19 @@ var fi = div({style:{flex:“1”}});
 fi.appendChild(p({style:{margin:0,fontWeight:“700”,fontSize:“13px”,color:”#7C3AED”}}, fichaActual.nombre));
 fi.appendChild(p({style:{margin:0,fontSize:“11px”,color:”#94A3B8”}}, “PDF guardado”));
 fichaInfo.appendChild(fi);
-fichaInfo.appendChild(btn({style:{background:”#7C3AED”,color:“white”,border:“none”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,fontWeight:“600”},onclick:function(){ var a=document.createElement(“a”); a.href=fichaActual.data; a.download=fichaActual.nombre; a.click(); }}, “Descargar”));
-fichaInfo.appendChild(btn({style:{background:”#FEF2F2”,color:”#EF4444”,border:“none”,padding:“6px 10px”,borderRadius:“7px”,fontSize:“12px”},onclick:function(){ if(fichaId){ delete fichas[fichaId]; saveFichas(fichas); } setState({view:“agregar”}); }}, “🗑”));
+var dlBtn = btn({style:{background:”#7C3AED”,color:“white”,border:“none”,padding:“6px 12px”,borderRadius:“7px”,fontSize:“12px”,fontWeight:“600”},onclick:function(){
+var a=document.createElement(“a”); a.href=fichaActual.data; a.download=fichaActual.nombre; a.click();
+}}, “Descargar”);
+fichaInfo.appendChild(dlBtn);
+var delFichaBtn = btn({style:{background:”#FEF2F2”,color:”#EF4444”,border:“none”,padding:“6px 10px”,borderRadius:“7px”,fontSize:“12px”},onclick:function(){
+if(fichaId){ delete fichas[fichaId]; saveFichas(fichas); } setState({view:“agregar”});
+}}, “🗑”);
+fichaInfo.appendChild(delFichaBtn);
 fichaDiv.appendChild(fichaInfo);
 }
 var fichaFileInp = inp({type:“file”,accept:“application/pdf”,style:{display:“none”},onchange:function(e){
 var file = e.target.files && e.target.files[0]; if(!file) return;
-if(file.size > 5*1024*1024){ showToast(“PDF muy grande (max 5MB)”,“err”); return; }
+if(file.size > 510241024){ showToast(“PDF muy grande (max 5MB)”,“err”); return; }
 var reader = new FileReader();
 reader.onload = function(ev){
 var tempId = fichaId || (“temp-”+genId());
@@ -1189,10 +988,11 @@ setState({view:“agregar”});
 };
 reader.readAsDataURL(file);
 }});
-fichaDiv.appendChild(btn({style:{background:”#F5F3FF”,border:“1.5px dashed #A78BFA”,color:”#7C3AED”,padding:“10px 16px”,borderRadius:“8px”,fontSize:“13px”,fontWeight:“600”,width:“100%”},onclick:function(){ fichaFileInp.click(); }}, fichaActual ? “🔄 Reemplazar PDF” : “📎 Subir ficha tecnica (PDF)”));
+var uploadFichaBtn = btn({style:{background:”#F5F3FF”,border:“1.5px dashed #A78BFA”,color:”#7C3AED”,padding:“10px 16px”,borderRadius:“8px”,fontSize:“13px”,fontWeight:“600”,width:“100%”},onclick:function(){ fichaFileInp.click(); }},
+fichaActual ? “🔄 Reemplazar PDF” : “📎 Subir ficha tecnica (PDF)”);
+fichaDiv.appendChild(uploadFichaBtn);
 fichaDiv.appendChild(fichaFileInp);
 g.appendChild(fichaDiv);
-
 if (isEdit) {
 var n = div({class:“span2”,style:{background:”#F0FFF4”,borderRadius:“8px”,padding:“10px 14px”,border:“1px solid #BBF7D0”}});
 n.appendChild(p({style:{margin:0,fontSize:“12px”,color:”#059669”}}, “🕐 Se registrara la fecha de actualizacion: “ + today()));
@@ -1214,8 +1014,11 @@ savedId = genId();
 persist([Object.assign({},f,{id:savedId,fechaSubida:today(),fechaActualizacion:””})].concat(S.items));
 showToast(“Guardado ✓”);
 }
+// Move temp ficha to real id
 if(f._fichaTemp && f._fichaTemp !== savedId && fichas[f._fichaTemp]) {
-fichas[savedId] = fichas[f._fichaTemp]; delete fichas[f._fichaTemp]; saveFichas(fichas);
+fichas[savedId] = fichas[f._fichaTemp];
+delete fichas[f._fichaTemp];
+saveFichas(fichas);
 }
 setState({view:“catalogo”,editItem:null,form:emptyForm()});
 }}, isEdit ? “Guardar cambios” : “Guardar material”));
@@ -1223,28 +1026,23 @@ brow.appendChild(btn({class:“btn-secondary”, onclick:function(){ setState({v
 wrap.appendChild(brow);
 return wrap;
 }
-
-// ══════════════════════════════════════════════
-// RENDER — COTIZACION
-// ══════════════════════════════════════════════
 function renderCotizacion() {
 var wrap = div({});
 var tabs = div({style:{display:“flex”,gap:“0”,background:“white”,borderRadius:“12px”,padding:“4px”,boxShadow:“0 1px 6px rgba(0,0,0,.07)”,marginBottom:“16px”}});
 [[“select”,“1. Seleccionar”],[“configure”,“2. Utilidad”],[“resumen”,“3. Resumen”]].forEach(function(x){
-tabs.appendChild(btn({class:“cot-tab”+(S.cotView===x[0]?” active”:””), onclick:function(){ setState({cotView:x[0]}); }}, x[1]));
+var s=x[0],l=x[1];
+tabs.appendChild(btn({class:“cot-tab”+(S.cotView===s?” active”:””), onclick:function(){ setState({cotView:s}); }}, l));
 });
 wrap.appendChild(tabs);
-
 if (S.cotView === “select”) {
 var box = div({style:{background:“white”,borderRadius:“14px”,padding:“16px”,boxShadow:“0 1px 8px rgba(0,0,0,.07)”,marginBottom:“14px”}});
 var btop = div({style:{display:“flex”,alignItems:“center”,justifyContent:“space-between”,marginBottom:“12px”}});
 btop.appendChild(h(“h2”,{style:{margin:0,fontSize:“15px”}}, “Selecciona los articulos”));
 if (S.cotItems.length) btop.appendChild(btn({class:“btn-primary”,style:{padding:“9px 16px”,fontSize:“13px”}, onclick:function(){ setState({cotView:“configure”}); }}, “Siguiente →”));
 box.appendChild(btop);
-box.appendChild(inp({class:“inp”,type:“text”,placeholder:“🔍 Buscar…”,value:S.cotSearch, oninput:function(e){ setState({cotSearch:e.target.value,cotView:“select”}); }}));
-wrap.appendChild(box);
+var si = inp({class:“inp”,type:“text”,placeholder:“🔍 Buscar…”,value:S.cotSearch, oninput:function(e){ setState({cotSearch:e.target.value,cotView:“select”}); }});
+box.appendChild(si); wrap.appendChild(box);
 
-```
 if (!S.items.length) { wrap.appendChild(div({class:"empty"}, "No hay materiales aun")); return wrap; }
 var cotFiltered = S.items
   .filter(function(i){ return S.cotFilterDisc === "all" || i.disciplina === S.cotFilterDisc; })
@@ -1278,9 +1076,10 @@ cotFiltered.forEach(function(item){
   if (isSel && ci) {
     var qrow = div({style:{padding:"10px 14px",borderTop:"1px solid #DBEAFE",background:"#F0F7FF",display:"flex",alignItems:"center",gap:"12px"}});
     qrow.appendChild(span({style:{fontSize:"11px",fontWeight:"700",color:"#3B82F6",textTransform:"uppercase"}}, "Cantidad"));
-    qrow.appendChild(inp({type:"number",min:"0.01",step:"any",value:ci.cantidad,style:{width:"90px",padding:"6px 10px",borderRadius:"7px",border:"1.5px solid #BFDBFE",fontSize:"14px",fontWeight:"700",textAlign:"center"}, oninput:function(e){
+    var qi = inp({type:"number",min:"0.01",step:"any",value:ci.cantidad,style:{width:"90px",padding:"6px 10px",borderRadius:"7px",border:"1.5px solid #BFDBFE",fontSize:"14px",fontWeight:"700",textAlign:"center"}, oninput:function(e){
       S.cotItems = S.cotItems.map(function(c){ return c.itemId===item.id ? Object.assign({},c,{cantidad:e.target.value}) : c; });
-    }}));
+    }});
+    qrow.appendChild(qi);
     qrow.appendChild(span({style:{fontSize:"12px",color:"#64748B"}}, item.unidad));
     qrow.appendChild(span({style:{marginLeft:"auto",fontSize:"12px",color:"#3B82F6",fontWeight:"600"}}, "Subtotal: " + fmt(Number(item.precio)*(Number(ci.cantidad)||1))));
     card.appendChild(qrow);
@@ -1290,7 +1089,7 @@ cotFiltered.forEach(function(item){
 
 if (S.cotItems.length) {
   var bar = div({class:"sticky-bar"});
-  var totalCost = S.cotItems.reduce(function(s,ci){ var it=S.items.find(function(i){ return i.id===ci.itemId; }); return s+(Number(it&&it.precio||0)*Number(ci.cantidad||1)); },0);
+  var totalCost = S.cotItems.reduce(function(s,ci){ var it = S.items.find(function(i){ return i.id===ci.itemId; }); return s+(Number(it&&it.precio||0)*Number(ci.cantidad||1)); }, 0);
   var bi = div({style:{flex:"1"}});
   bi.appendChild(p({style:{margin:0,fontWeight:"700",fontSize:"14px"}}, S.cotItems.length + " articulo" + (S.cotItems.length!==1?"s":"") + " seleccionado" + (S.cotItems.length!==1?"s":"")));
   bi.appendChild(p({style:{margin:0,fontSize:"12px",color:"#64748B"}}, "Costo: " + fmt(totalCost)));
@@ -1298,7 +1097,7 @@ if (S.cotItems.length) {
   bar.appendChild(btn({class:"btn-primary", onclick:function(){ setState({cotView:"configure"}); }}, "Configurar utilidad →"));
   wrap.appendChild(bar);
 }
-```
+
 
 }
 else if (S.cotView === “configure”) {
@@ -1310,9 +1109,9 @@ nf.appendChild(inp({class:“inp”,type:“text”,placeholder:“COT-2024-001�
 dg.appendChild(nf);
 var cf = div({}); cf.appendChild(makeLabel(“Cliente”));
 cf.appendChild(inp({class:“inp”,type:“text”,placeholder:“Nombre del cliente”,value:S.cotCliente, oninput:function(e){ S.cotCliente=e.target.value; }}));
-dg.appendChild(cf); box2.appendChild(dg); wrap.appendChild(box2);
+dg.appendChild(cf);
+box2.appendChild(dg); wrap.appendChild(box2);
 
-```
 var box3 = div({style:{background:"white",borderRadius:"14px",padding:"18px",boxShadow:"0 1px 8px rgba(0,0,0,.07)",marginBottom:"14px"}});
 box3.appendChild(h("h2",{style:{margin:"0 0 14px",fontSize:"15px"}}, "Modo de utilidad"));
 var mg = div({style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"16px"}});
@@ -1329,7 +1128,8 @@ box3.appendChild(mg);
 if (S.pctMode === "global") {
   var gp = div({style:{background:"#F8FAFC",borderRadius:"10px",padding:"16px",display:"flex",alignItems:"center",gap:"14px"}});
   gp.appendChild(span({style:{fontSize:"24px"}}, "🌐"));
-  var gpf = div({style:{flex:"1"}}); gpf.appendChild(makeLabel("% de utilidad para todos"));
+  var gpf = div({style:{flex:"1"}});
+  gpf.appendChild(makeLabel("% de utilidad para todos"));
   var gpr = div({style:{display:"flex",alignItems:"center",gap:"8px"}});
   gpr.appendChild(inp({class:"inp",type:"number",min:"0",max:"999",step:"0.5",value:S.globalPct,style:{width:"100px",textAlign:"center",fontWeight:"700",fontSize:"18px"}, oninput:function(e){ S.globalPct=e.target.value; S.cotItems=S.cotItems.map(function(c){ return Object.assign({},c,{pct:e.target.value}); }); }}));
   gpr.appendChild(span({style:{fontWeight:"700",fontSize:"18px",color:"#64748B"}}, "%"));
@@ -1362,16 +1162,15 @@ var brow = div({style:{display:"flex",gap:"10px",justifyContent:"flex-end"}});
 brow.appendChild(btn({class:"btn-secondary", onclick:function(){ setState({cotView:"select"}); }}, "← Volver"));
 brow.appendChild(btn({class:"btn-green", onclick:function(){ setState({cotView:"resumen"}); }}, "Ver resumen →"));
 wrap.appendChild(brow);
-```
+
 
 }
 else if (S.cotView === “resumen”) {
 var rows = getResumenRows();
-var grandSub   = rows.reduce(function(s,r){ return s+r.subtot; },0);
-var grandUtil  = rows.reduce(function(s,r){ return s+r.utilTot; },0);
+var grandSub = rows.reduce(function(s,r){ return s+r.subtot; },0);
+var grandUtil = rows.reduce(function(s,r){ return s+r.utilTot; },0);
 var grandTotal = rows.reduce(function(s,r){ return s+r.totalTot; },0);
 
-```
 var hdr2 = div({style:{background:"linear-gradient(135deg,#1E293B,#334155)",borderRadius:"14px",padding:"20px",marginBottom:"14px",color:"white"}});
 var hr = div({style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:"10px"}});
 var hl = div({});
@@ -1423,31 +1222,43 @@ brow2.appendChild(btn({class:"btn-secondary", onclick:function(){ setState({cotV
 brow2.appendChild(btn({class:"btn-green", onclick:exportCotCSV}, "⬇ Exportar Excel"));
 brow2.appendChild(btn({style:{background:"#FEF2F2",color:"#EF4444",border:"none",padding:"11px 18px",borderRadius:"10px",fontSize:"14px"}, onclick:function(){ setState({cotItems:[],cotView:"select",cotNombre:"",cotCliente:""}); showToast("Cotizacion limpiada","info"); }}, "🗑 Nueva"));
 wrap.appendChild(brow2);
-```
+
 
 }
 return wrap;
 }
-
-// ══════════════════════════════════════════════
-// RENDER PRINCIPAL
-// ══════════════════════════════════════════════
+// ── Main render ──
+function renderLogin() {
+var wrap = div({class:“login-wrap”});
+var box = div({class:“login-box”});
+box.appendChild(div({style:{textAlign:“center”,marginBottom:“24px”}},
+h(“div”,{style:{fontSize:“48px”,marginBottom:“8px”}}, “📋”),
+h(“h1”,{style:{fontSize:“22px”,fontWeight:“800”,color:”#1E293B”,margin:“0 0 4px”}}, “Base de Precios”),
+h(“p”,{style:{color:”#64748B”,fontSize:“14px”,margin:0}}, “Inicia sesion para continuar”)
+));
+var emailInp = inp({class:“inp”,type:“email”,placeholder:“Correo electronico”,style:{marginBottom:“12px”,fontSize:“16px”}});
+var passInp = inp({class:“inp”,type:“password”,placeholder:“Contrasena”,style:{marginBottom:“8px”,fontSize:“16px”}});
+var errDiv = div({style:{color:”#EF4444”,fontSize:“13px”,minHeight:“20px”,marginBottom:“12px”,textAlign:“center”}});
+var loginBtn = btn({class:“btn-primary”,style:{width:“100%”,padding:“13px”,fontSize:“15px”},
+onclick:function(){
+var e=emailInp.value.trim(), p=passInp.value;
+if(!e||!p){errDiv.textContent=“Ingresa correo y contrasena”;return;}
+loginBtn.textContent=“Entrando…”; loginBtn.disabled=true;
+doLogin(e,p,function(msg){
+errDiv.textContent=msg.replace(“Firebase:”,””).replace(/(auth.*)/,””).trim();
+loginBtn.textContent=“Entrar”; loginBtn.disabled=false;
+});
+}
+}, “Entrar”);
+box.appendChild(emailInp); box.appendChild(passInp); box.appendChild(errDiv); box.appendChild(loginBtn);
+wrap.appendChild(box);
+return wrap;
+}
 function render() {
 var app = document.getElementById(“app”);
 app.innerHTML = “”;
-
-// ── LOGIN view ──
-if (S.view === “login”) {
-app.appendChild(renderLogin());
-if (S.toast) app.appendChild(div({class:“toast”,style:{background:S.toast.bg}}, S.toast.msg));
-return;
-}
-
-// ── HEADER ──
 var hdr = div({class:“header”});
 var htop = div({class:“header-top”});
-
-// Logo + info
 var logo = div({style:{display:“flex”,alignItems:“center”,gap:“10px”}});
 logo.appendChild(span({style:{fontSize:“26px”}}, “📋”));
 var lt = div({});
@@ -1456,49 +1267,25 @@ lt.appendChild(h(“h1”,{style:{margin:0,color:”#F1F5F9”,fontSize:“18px�
 var sub = p({style:{margin:0,color:”#94A3B8”,fontSize:“11px”}}, S.items.length + “ materiales”);
 if (alertCount > 0) sub.appendChild(span({style:{color:”#FCA5A5”,marginLeft:“8px”}}, “· “+alertCount+” por actualizar”));
 lt.appendChild(sub); logo.appendChild(lt); htop.appendChild(logo);
-
-// Right actions: Export + New + Logout
-var acts = div({style:{display:“flex”,gap:“7px”,alignItems:“center”}});
-
-// Session info chip
-if (currentUser) {
-var emailShort = currentUser.email ? currentUser.email.split(”@”)[0] : “”;
-acts.appendChild(div({class:“session-chip”},
-div({class:“session-dot”}),
-span({style:{fontSize:“11px”,color:”#94A3B8”,maxWidth:“80px”,overflow:“hidden”,textOverflow:“ellipsis”,whiteSpace:“nowrap”}}, emailShort)
-));
-}
-
+var acts = div({style:{display:“flex”,gap:“7px”}});
 acts.appendChild(btn({style:{background:”#0F172A”,border:“1px solid #475569”,color:”#CBD5E1”,padding:“7px 11px”,borderRadius:“8px”,fontSize:“12px”,fontWeight:“600”}, onclick:exportCSV}, “⬇ Excel”));
 acts.appendChild(btn({style:{background:”#3B82F6”,border:“none”,color:“white”,padding:“7px 14px”,borderRadius:“8px”,fontSize:“13px”,fontWeight:“700”}, onclick:function(){ setState({view:“agregar”,editItem:null,form:emptyForm()}); }}, “+ Nuevo”));
-
-// Logout button
-acts.appendChild(btn({class:“btn-logout”, onclick:manualLogout},
-span({style:{fontSize:“14px”}}, “⏻”),
-“Salir”
-));
-
 htop.appendChild(acts); hdr.appendChild(htop);
-
 var tabsEl = div({class:“tabs”});
 [{id:“catalogo”,label:“📦 Catalogo”},{id:“cotizacion”,label:“🧮 Cotizar”+(S.cotItems.length?” (”+S.cotItems.length+”)”:””)},{id:“buscar”,label:“🔍 Busqueda”},{id:“escanear”,label:“📷 Escanear”},{id:“agregar”,label:S.editItem?“✏️ Editar”:“➕ Manual”}].forEach(function(t){
 tabsEl.appendChild(btn({class:“tab”+(S.view===t.id?” active”:””), onclick:function(){ setState({view:t.id}); }}, t.label));
 });
 hdr.appendChild(tabsEl); app.appendChild(hdr);
-
-// ── CONTENT ──
 var content = div({class:“content”});
-if      (S.view === “catalogo”)   content.appendChild(renderCatalogo());
-else if (S.view === “buscar”)     content.appendChild(renderBusqueda());
-else if (S.view === “escanear”)   content.appendChild(renderEscanear());
-else if (S.view === “agregar”)    content.appendChild(renderForm());
-else if (S.view === “cotizacion”) content.appendChild(renderCotizacion());
+if      (S.view === “catalogo”)    content.appendChild(renderCatalogo());
+else if (S.view === “buscar”)      content.appendChild(renderBusqueda());
+else if (S.view === “escanear”)    content.appendChild(renderEscanear());
+else if (S.view === “agregar”)     content.appendChild(renderForm());
+else if (S.view === “cotizacion”)  content.appendChild(renderCotizacion());
 app.appendChild(content);
-
-// ── TOAST ──
-if (S.toast) app.appendChild(div({class:“toast”,style:{background:S.toast.bg}}, S.toast.msg));
-
-// ── CONFIRM DELETE ──
+if (S.toast) {
+app.appendChild(div({class:“toast”,style:{background:S.toast.bg}}, S.toast.msg));
+}
 if (S.confirmDel) {
 var item = S.items.find(function(i){ return i.id === S.confirmDel; });
 var bg2 = div({class:“modal-bg”});
@@ -1510,33 +1297,9 @@ br.appendChild(btn({class:“btn-red”, onclick:function(){ persist(S.items.fil
 br.appendChild(btn({class:“btn-secondary”, onclick:function(){ setState({confirmDel:null}); }}, “Cancelar”));
 m.appendChild(br); bg2.appendChild(m); app.appendChild(bg2);
 }
-
-// ── CONFIRM LOGOUT MANUAL ──
-if (S.confirmLogout) {
-var lbg = div({class:“modal-bg”});
-var lm = div({class:“modal”,style:{textAlign:“center”}});
-lm.appendChild(div({style:{fontSize:“44px”,marginBottom:“10px”}}, “🔐”));
-lm.appendChild(p({style:{margin:“0 0 6px”,fontWeight:“700”,fontSize:“16px”}}, “¿Cerrar sesion?”));
-lm.appendChild(p({style:{margin:“0 0 22px”,color:”#64748B”,fontSize:“14px”}}, “Se cerrara tu sesion en este dispositivo.”));
-var lbr = div({style:{display:“flex”,gap:“10px”}});
-lbr.appendChild(btn({class:“btn-red”,style:{flex:“1”,padding:“12px”}, onclick:function(){
-setState({confirmLogout:false});
-showToast(“Sesion cerrada”,“info”);
-setTimeout(doLogout, 600);
-}}, “⏻ Cerrar sesion”));
-lbr.appendChild(btn({class:“btn-secondary”,style:{flex:“1”,padding:“12px”}, onclick:function(){ setState({confirmLogout:false}); }}, “Cancelar”));
-lm.appendChild(lbr); lbg.appendChild(lm); app.appendChild(lbg);
 }
-
-// ── IDLE WARNING OVERLAY ──
-if (S.idleWarning) {
-app.appendChild(renderIdleWarning());
-}
-}
-
 render();
+// Initialize Firebase auth + sync
 setTimeout(initAuth, 100);
-</script>
-
-</body>
+</script></body>
 </html>
