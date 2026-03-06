@@ -59,11 +59,14 @@ tfoot td{font-weight:700;background:#F1F5F9 !important;border-top:2px solid #E2E
 .loc-tag{font-size:11px;color:#06B6D4;font-weight:600;}
 .date-tag{font-size:10px;color:#CBD5E1;}
 .upd-tag{font-size:10px;color:#86EFAC;}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1E293B,#334155);padding:20px;}
+.login-box{background:white;border-radius:20px;padding:36px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
 select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748B' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px;}
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -95,6 +98,55 @@ var COL = "materiales";
 // Firebase sync state
 var fbLoaded = false;
 var fbListenerActive = false;
+var currentUser = null;
+
+// Users whitelist stored in Firestore: collection "usuarios", doc = email, field "activo": true/false
+var USERS_COL = "usuarios";
+
+function initAuth() {
+  var auth = firebase.auth();
+  auth.onAuthStateChanged(function(user) {
+    if (user) {
+      // Check if user is allowed
+      db.collection(USERS_COL).doc(user.email).get().then(function(doc) {
+        if (doc.exists && doc.data().activo === true) {
+          currentUser = user;
+          S.view = S.view === "login" ? "catalogo" : S.view;
+          initFirebase();
+          render();
+        } else {
+          showToast("Acceso denegado. Contacta al administrador.", "err");
+          auth.signOut();
+          currentUser = null;
+          S.view = "login";
+          render();
+        }
+      }).catch(function() {
+        // If usuarios collection doesn't exist yet, first user becomes admin
+        db.collection(USERS_COL).doc(user.email).set({activo:true, nombre:user.email, admin:true, creado:new Date().toISOString()}).then(function(){
+          currentUser = user;
+          S.view = "catalogo";
+          initFirebase();
+          render();
+        });
+      });
+    } else {
+      currentUser = null;
+      S.view = "login";
+      fbListenerActive = false;
+      render();
+    }
+  });
+}
+
+function doLogin(email, password, onErr) {
+  firebase.auth().signInWithEmailAndPassword(email, password)
+    .catch(function(e) { onErr(e.message); });
+}
+
+function doLogout() {
+  firebase.auth().signOut();
+}
 
 function initFirebase() {
   if (fbListenerActive) return;
@@ -184,7 +236,7 @@ function getProveedores() {
 // State
 var S = {
   items: loadItems(),
-  view: "catalogo",
+  view: "login",
   search: "", filterDisc: "all", filterAge: "all", sortBy: "nombre",
   toast: null, toastTimer: null,
   confirmDel: null,
@@ -197,7 +249,11 @@ var S = {
   quickEditId: null, quickEditVal: "",
 };
 
-function setState(patch) { Object.assign(S, patch); render(); }
+function setState(patch) {
+  var searchOnly = Object.keys(patch).length === 1 && "search" in patch;
+  Object.assign(S, patch);
+  if (!searchOnly) render();
+}
 function persist(items) {
   var oldIds = S.items.map(function(i){ return i.id; });
   var newIds = items.map(function(i){ return i.id; });
@@ -1258,6 +1314,33 @@ function renderCotizacion() {
 }
 
 // ── Main render ──
+function renderLogin() {
+  var wrap = div({class:"login-wrap"});
+  var box = div({class:"login-box"});
+  box.appendChild(div({style:{textAlign:"center",marginBottom:"24px"}},
+    h("div",{style:{fontSize:"48px",marginBottom:"8px"}}, "📋"),
+    h("h1",{style:{fontSize:"22px",fontWeight:"800",color:"#1E293B",margin:"0 0 4px"}}, "Base de Precios"),
+    h("p",{style:{color:"#64748B",fontSize:"14px",margin:0}}, "Inicia sesion para continuar")
+  ));
+  var emailInp = inp({class:"inp",type:"email",placeholder:"Correo electronico",style:{marginBottom:"12px",fontSize:"16px"}});
+  var passInp = inp({class:"inp",type:"password",placeholder:"Contrasena",style:{marginBottom:"8px",fontSize:"16px"}});
+  var errDiv = div({style:{color:"#EF4444",fontSize:"13px",minHeight:"20px",marginBottom:"12px",textAlign:"center"}});
+  var loginBtn = btn({class:"btn-primary",style:{width:"100%",padding:"13px",fontSize:"15px"},
+    onclick:function(){
+      var e=emailInp.value.trim(), p=passInp.value;
+      if(!e||!p){errDiv.textContent="Ingresa correo y contrasena";return;}
+      loginBtn.textContent="Entrando..."; loginBtn.disabled=true;
+      doLogin(e,p,function(msg){
+        errDiv.textContent=msg.replace("Firebase:","").replace(/\(auth.*\)/,"").trim();
+        loginBtn.textContent="Entrar"; loginBtn.disabled=false;
+      });
+    }
+  }, "Entrar");
+  box.appendChild(emailInp); box.appendChild(passInp); box.appendChild(errDiv); box.appendChild(loginBtn);
+  wrap.appendChild(box);
+  return wrap;
+}
+
 function render() {
   var app = document.getElementById("app");
   app.innerHTML = "";
@@ -1310,8 +1393,8 @@ function render() {
 }
 
 render();
-// Initialize Firebase sync
-setTimeout(initFirebase, 100);
+// Initialize Firebase auth + sync
+setTimeout(initAuth, 100);
 </script>
 
 </body>
