@@ -76,261 +76,129 @@ select.inp{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xm
 /* ── Session info chip ── */
 .session-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:4px 10px;font-size:11px;color:#94A3B8;}
 .session-dot{width:7px;height:7px;border-radius:50%;background:#34D399;box-shadow:0 0 6px #34D399;flex-shrink:0;}
+
+/* Logout button */
+.btn-logout{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#FCA5A5;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;}
+.session-chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:4px 10px;font-size:11px;color:#94A3B8;}
+.session-dot{width:7px;height:7px;border-radius:50%;background:#34D399;flex-shrink:0;}
+/* Idle warning */
+.idle-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px;}
+.idle-modal{background:white;border-radius:20px;padding:30px 26px;max-width:320px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.3);text-align:center;}
+.idle-countdown{font-size:52px;font-weight:800;color:#EF4444;line-height:1;margin:12px 0;}
+.idle-bar-wrap{background:#FEE2E2;border-radius:99px;height:8px;margin:14px 0 20px;overflow:hidden;}
+.idle-bar{height:100%;background:#EF4444;border-radius:99px;transition:width 1s linear;}
 </style>
+
+<!-- Firebase SDK -->
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 
 </head>
 <body>
 <div id="app"></div>
 <input type="file" id="fileInput" accept="image/*,application/pdf" capture="environment" style="display:none">
 <script>
+var ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+var API_KEY = "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";
+var STORAGE_KEY = "precios_v5";
 
-var ANTHROPIC_API = “https://api.anthropic.com/v1/messages”;
-var API_KEY = “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”;
-var STORAGE_KEY = “precios_v5”;
+var FIREBASE_CONFIG = {
+apiKey: “AIzaSyAS8KPL0eIzWZQvlehUqXrtrbnKhMFmlFs”,
+authDomain: “base-precios-unitarios.firebaseapp.com”,
+projectId: “base-precios-unitarios”,
+storageBucket: “base-precios-unitarios.firebasestorage.app”,
+messagingSenderId: “718014666569”,
+appId: “1:718014666569:web:2dbe2c34d03c0fd80f2c98”
+};
 
+var fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+var db = firebase.firestore();
 var COL = “materiales”;
-var USERS_COL = “usuarios”;
-// ══════════════════════════════════════════════
-// FIREBASE REST API - SIN SDK, SIN SCRIPTS EXTERNOS
-// ══════════════════════════════════════════════
-var FB_API_KEY   = “AIzaSyAS8KPL0eIzWZQvlehUqXrtrbnKhMFmlFs”;
-var FB_PROJECT   = “base-precios-unitarios”;
-var FB_AUTH_URL  = “https://identitytoolkit.googleapis.com/v1/accounts:”;
-var FB_FS_URL    = “https://firestore.googleapis.com/v1/projects/” + FB_PROJECT + “/databases/(default)/documents/”;
-
-var authToken    = null;
-var tokenExpiry  = 0;
-var currentUser  = null;
+var fbLoaded = false;
 var fbListenerActive = false;
-var fbLoaded     = false;
-var pollTimer    = null;
-var lastSnapshot = {};
+var currentUser = null;
+var USERS_COL = “usuarios”;
 
-// ── Firestore value converters ──
-function toFsValue(val) {
-if (val === null || val === undefined) return {nullValue: null};
-if (typeof val === “boolean”) return {booleanValue: val};
-if (typeof val === “number”)  return {doubleValue: val};
-if (typeof val === “string”)  return {stringValue: val};
-if (Array.isArray(val))       return {arrayValue: {values: val.map(toFsValue)}};
-if (typeof val === “object”)  return {mapValue: {fields: objToFs(val)}};
-return {stringValue: String(val)};
-}
-function objToFs(obj) {
-var fields = {};
-Object.keys(obj).forEach(function(k) { fields[k] = toFsValue(obj[k]); });
-return fields;
-}
-function fromFsValue(v) {
-if (!v) return null;
-if (“stringValue”  in v) return v.stringValue;
-if (“booleanValue” in v) return v.booleanValue;
-if (“doubleValue”  in v) return v.doubleValue;
-if (“integerValue” in v) return Number(v.integerValue);
-if (“nullValue”    in v) return null;
-if (“arrayValue”   in v) return (v.arrayValue.values || []).map(fromFsValue);
-if (“mapValue”     in v) return fsToObj(v.mapValue.fields || {});
-return null;
-}
-function fsToObj(fields) {
-var obj = {};
-Object.keys(fields).forEach(function(k) { obj[k] = fromFsValue(fields[k]); });
-return obj;
-}
-function docToItem(doc) {
-var id = doc.name.split(”/”).pop();
-return Object.assign({id: id}, fsToObj(doc.fields || {}));
-}
+// ══════════════════════════════════════════════
+// AUTO-LOGOUT POR INACTIVIDAD (60 min)
+// ══════════════════════════════════════════════
+var IDLE_TIMEOUT_MS  = 60 * 60 * 1000;
+var IDLE_WARNING_MS  = 59 * 60 * 1000;
+var idleTimer        = null;
+var warningTimer     = null;
+var countdownTimer   = null;
+var idleCountdown    = 60;
+var showingIdleWarning = false;
+var ACTIVITY_EVENTS  = [“mousemove”,“mousedown”,“keydown”,“touchstart”,“touchmove”,“scroll”,“click”,“wheel”];
 
-// ── Auth ──
-function doLogin(email, password, onErr) {
-fetch(FB_AUTH_URL + “signInWithPassword?key=” + FB_API_KEY, {
-method: “POST”,
-headers: {“Content-Type”: “application/json”},
-body: JSON.stringify({email: email, password: password, returnSecureToken: true})
-})
-.then(function(r) { return r.json(); })
-.then(function(data) {
-if (data.error) { onErr(data.error.message || “Error al iniciar sesión”); return; }
-authToken   = data.idToken;
-tokenExpiry = Date.now() + (Number(data.expiresIn) * 1000);
-currentUser = {email: email, uid: data.localId};
-// Check user access
-checkUserAccess(email);
-})
-.catch(function(e) { onErr(“Sin conexión a internet”); });
+function resetIdleTimers() {
+if (!currentUser) return;
+if (showingIdleWarning) return;
+clearTimeout(idleTimer);
+clearTimeout(warningTimer);
+warningTimer = setTimeout(showIdleWarning, IDLE_WARNING_MS);
+idleTimer    = setTimeout(performAutoLogout, IDLE_TIMEOUT_MS);
 }
-
-function checkUserAccess(email) {
-fsGet(USERS_COL + “/” + encodeURIComponent(email))
-.then(function(doc) {
-if (doc && doc.activo === true) {
-S.view = “catalogo”;
-initFirebase();
-startActivityTracking();
-saveSession();
+function startActivityTracking() {
+ACTIVITY_EVENTS.forEach(function(ev){ document.addEventListener(ev, resetIdleTimers, {passive:true}); });
+resetIdleTimers();
+}
+function stopActivityTracking() {
+ACTIVITY_EVENTS.forEach(function(ev){ document.removeEventListener(ev, resetIdleTimers); });
+clearTimeout(idleTimer); clearTimeout(warningTimer); clearInterval(countdownTimer);
+}
+function showIdleWarning() {
+showingIdleWarning = true;
+idleCountdown = 60;
+S.idleWarning = true;
 render();
-} else if (!doc) {
-// First user - create as admin
-fsSave(USERS_COL + “/” + encodeURIComponent(email), {
-activo: true, nombre: email, admin: true, creado: new Date().toISOString()
-}).then(function() {
-S.view = “catalogo”;
-initFirebase();
-startActivityTracking();
-render();
-});
-} else {
-showToast(“Acceso denegado. Contacta al administrador.”, “err”);
-doLogout();
+countdownTimer = setInterval(function(){
+idleCountdown -= 1;
+var bar = document.getElementById(“idle-bar”);
+var num = document.getElementById(“idle-num”);
+if (bar) bar.style.width = (idleCountdown/60*100)+”%”;
+if (num) num.textContent = idleCountdown;
+if (idleCountdown <= 0){ clearInterval(countdownTimer); performAutoLogout(); }
+}, 1000);
 }
-})
-.catch(function() {
-// If collection doesn’t exist, treat as first user
-fsSave(USERS_COL + “/” + encodeURIComponent(email), {
-activo: true, nombre: email, admin: true, creado: new Date().toISOString()
-}).then(function() {
-S.view = “catalogo”;
-initFirebase();
-startActivityTracking();
+function dismissIdleWarning() {
+clearInterval(countdownTimer);
+showingIdleWarning = false;
+S.idleWarning = false;
 render();
-});
-});
+resetIdleTimers();
 }
-
-function doLogout() {
-authToken   = null;
-currentUser = null;
-fbListenerActive = false;
+function performAutoLogout() {
 stopActivityTracking();
-stopPolling();
+showingIdleWarning = false;
+S.idleWarning = false;
 S.view = “login”;
+doLogout();
+showToast(“Sesion cerrada por inactividad”, “info”);
+}
+function manualLogout() {
+S.confirmLogout = true;
 render();
 }
-
-// ── Firestore REST ──
-function authHeader() {
-return authToken ? {“Authorization”: “Bearer “ + authToken} : {};
-}
-
-function fsGet(path) {
-return fetch(FB_FS_URL + path, {
-headers: Object.assign({“Content-Type”: “application/json”}, authHeader())
-})
-.then(function(r) {
-if (r.status === 404) return null;
-return r.json();
-})
-.then(function(data) {
-if (!data || data.error) return null;
-return fsToObj(data.fields || {});
-});
-}
-
-function fsSave(path, obj) {
-var fields = objToFs(obj);
-return fetch(FB_FS_URL + path + “?currentDocument.exists=false”, {
-method: “POST”,
-headers: Object.assign({“Content-Type”: “application/json”}, authHeader()),
-body: JSON.stringify({fields: fields})
-})
-.then(function(r) {
-if (r.status === 409 || !r.ok) {
-// Document exists, use PATCH
-return fetch(FB_FS_URL + path, {
-method: “PATCH”,
-headers: Object.assign({“Content-Type”: “application/json”}, authHeader()),
-body: JSON.stringify({fields: fields})
-});
-}
-return r;
-});
-}
-
-function fbSave(item) {
-var id = item.id;
-var data = Object.assign({}, item);
-delete data.id;
-return fsSave(COL + “/” + id, data);
-}
-
-function fbDelete(id) {
-return fetch(FB_FS_URL + COL + “/” + id, {
-method: “DELETE”,
-headers: authHeader()
-});
-}
-
-function fsListAll() {
-return fetch(FB_FS_URL + COL + “?pageSize=300”, {
-headers: Object.assign({“Content-Type”: “application/json”}, authHeader())
-})
-.then(function(r) { return r.json(); })
-.then(function(data) {
-if (!data || !data.documents) return [];
-return data.documents.map(docToItem);
-})
-.catch(function() { return []; });
-}
-
-// ── Polling (replaces onSnapshot) ──
-function startPolling() {
-stopPolling();
-loadFromFirestore();
-pollTimer = setInterval(loadFromFirestore, 30000); // poll every 30s
-}
-
-function stopPolling() {
-if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-}
-
-function loadFromFirestore() {
-if (!authToken) return;
-fsListAll().then(function(items) {
-if (!items.length && S.items.length) return; // don’t overwrite local if empty response
-items.sort(function(a,b) { return (b.fechaSubida||””).localeCompare(a.fechaSubida||””); });
-S.items = items;
-saveItems(items);
-fbLoaded = true;
-render();
-}).catch(function(e) {
-console.error(“Firestore poll error:”, e);
-});
-}
-
-function initFirebase() {
-if (fbListenerActive) return;
-fbListenerActive = true;
-showToast(“Sincronizando…”, “info”);
-startPolling();
-}
-
-function initAuth() {
-// No SDK needed - just restore session from localStorage if token still valid
-var saved = null;
-try { saved = JSON.parse(localStorage.getItem(“session_v1”) || “null”); } catch(e) {}
-if (saved && saved.token && saved.expiry > Date.now() + 60000) {
-authToken   = saved.token;
-currentUser = saved.user;
-S.view = “catalogo”;
-initFirebase();
-startActivityTracking();
-render();
-} else {
-S.view = “login”;
-render();
-}
-}
-
-// Save session so user stays logged in on refresh
-function saveSession() {
-if (authToken && currentUser) {
-try {
-localStorage.setItem(“session_v1”, JSON.stringify({
-token: authToken, expiry: tokenExpiry, user: currentUser
-}));
-} catch(e) {}
-}
+function renderIdleWarning() {
+var bg = div({class:“idle-modal-bg”});
+var m  = div({class:“idle-modal”});
+m.appendChild(div({style:{fontSize:“44px”,marginBottom:“6px”}}, “⏳”));
+m.appendChild(h(“h2”,{style:{margin:“0 0 6px”,fontSize:“18px”,fontWeight:“800”,color:”#1E293B”}}, “¿Sigues ahi?”));
+m.appendChild(p({style:{margin:“0 0 4px”,fontSize:“13px”,color:”#64748B”}}, “Tu sesion se cerrara en:”));
+m.appendChild(div({id:“idle-num”,class:“idle-countdown”}, String(idleCountdown)));
+var bw = div({class:“idle-bar-wrap”});
+bw.appendChild(div({id:“idle-bar”,class:“idle-bar”,style:{width:“100%”}}));
+m.appendChild(bw);
+m.appendChild(p({style:{margin:“0 0 20px”,fontSize:“12px”,color:”#94A3B8”}}, “segundos de inactividad”));
+m.appendChild(btn({class:“btn-primary”,style:{width:“100%”,padding:“13px”,marginBottom:“10px”},onclick:dismissIdleWarning}, “✋ Continuar sesion”));
+m.appendChild(btn({class:“btn-secondary”,style:{width:“100%”,padding:“11px”},onclick:performAutoLogout}, “Cerrar sesion ahora”));
+bg.appendChild(m);
+return bg;
 }
 
 // ══════════════════════════════════════════════
@@ -401,14 +269,93 @@ function performAutoLogout() {
 stopActivityTracking();
 showingIdleWarning = false;
 S.idleWarning = false;
-localStorage.removeItem(“session_v1”);
+S.view = “login”;
 doLogout();
 showToast(“Sesion cerrada por inactividad”, “info”);
+}
+
+// ══════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════
+function initAuth() {
+var auth = firebase.auth();
+auth.onAuthStateChanged(function(user) {
+if (user) {
+db.collection(USERS_COL).doc(user.email).get().then(function(doc) {
+if (doc.exists && doc.data().activo === true) {
+currentUser = user;
+S.view = S.view === “login” ? “catalogo” : S.view;
+initFirebase();
+startActivityTracking();
+render();
+} else {
+showToast(“Acceso denegado. Contacta al administrador.”, “err”);
+auth.signOut();
+currentUser = null;
+S.view = “login”;
+render();
+}
+}).catch(function() {
+db.collection(USERS_COL).doc(user.email).set({activo:true,nombre:user.email,admin:true,creado:new Date().toISOString()}).then(function(){
+currentUser = user;
+S.view = “catalogo”;
+initFirebase();
+startActivityTracking();
+render();
+});
+});
+} else {
+currentUser = null;
+S.view = “login”;
+fbListenerActive = false;
+render();
+}
+});
+}
+
+function doLogin(email, password, onErr) {
+firebase.auth().signInWithEmailAndPassword(email, password)
+.catch(function(e) { onErr(e.message); });
+}
+
+function doLogout() {
+currentUser = null;
+fbListenerActive = false;
+firebase.auth().signOut();
 }
 
 function manualLogout() {
 S.confirmLogout = true;
 render();
+}
+
+function initFirebase() {
+if (fbListenerActive) return;
+fbListenerActive = true;
+showToast(“Sincronizando…”, “info”);
+db.collection(COL).orderBy(“fechaSubida”,“desc”).onSnapshot(function(snap) {
+var items = [];
+snap.forEach(function(doc) { items.push(Object.assign({id:doc.id}, doc.data())); });
+S.items = items;
+saveItems(items);
+fbLoaded = true;
+render();
+if(!fbLoaded) showToast(“Datos sincronizados ✓”);
+}, function(err) {
+console.error(“Firebase error:”, err);
+showToast(“Sin conexion - usando datos locales”, “info”);
+});
+}
+
+function fbSave(item) {
+var id = item.id;
+var data = Object.assign({}, item);
+delete data.id;
+return db.collection(COL).doc(id).set(data);
+}
+
+function fbDelete(id) {
+return db.collection(COL).doc(id).delete();
 }
 
 // ══════════════════════════════════════════════
@@ -1653,7 +1600,6 @@ var lbr = div({style:{display:“flex”,gap:“10px”}});
 lbr.appendChild(btn({class:“btn-red”,style:{flex:“1”,padding:“12px”}, onclick:function(){
 setState({confirmLogout:false});
 showToast(“Sesion cerrada”,“info”);
-localStorage.removeItem(“session_v1”);
 setTimeout(doLogout, 600);
 }}, “⏻ Cerrar sesion”));
 lbr.appendChild(btn({class:“btn-secondary”,style:{flex:“1”,padding:“12px”}, onclick:function(){ setState({confirmLogout:false}); }}, “Cancelar”));
@@ -1668,7 +1614,7 @@ app.appendChild(renderIdleWarning());
 
 render();
 setTimeout(initAuth, 100);
-
 </script>
+
 </body>
 </html>
