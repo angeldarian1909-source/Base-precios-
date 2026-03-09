@@ -1047,7 +1047,7 @@ document.addEventListener('click', e => {
 window.scanIA = async function() {
   const file = document.getElementById('iaFile').files[0];
   if (!file) return showIAError('Selecciona un archivo.');
-  if (file.size > 5*1024*1024) return showIAError('Archivo mayor a 5MB.');
+  if (file.size > 20*1024*1024) return showIAError('Archivo mayor a 20MB.');
 
   document.getElementById('iaLoading').style.display = 'flex';
   document.getElementById('iaError').style.display   = 'none';
