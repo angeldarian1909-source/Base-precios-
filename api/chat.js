@@ -1,45 +1,58 @@
+// /api/chat.js — Vercel serverless function
+// Proxy para proteger la API Key de Anthropic
+
 export default async function handler(req, res) {
+// CORS headers
+res.setHeader(“Access-Control-Allow-Origin”, “*”);
+res.setHeader(“Access-Control-Allow-Methods”, “POST, OPTIONS”);
+res.setHeader(“Access-Control-Allow-Headers”, “Content-Type, x-api-key”);
 
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+if (req.method === “OPTIONS”) return res.status(200).end();
+if (req.method !== “POST”) return res.status(405).json({ error: “Method not allowed” });
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+// Usar API key del entorno de Vercel
+const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  try {
+if (!apiKey) {
+return res.status(401).json({ error: “API key no configurada en el servidor” });
+}
 
-    let body = req.body;
-    if (typeof body === "string") body = JSON.parse(body);
+try {
+let body = req.body;
+if (typeof body === “string”) body = JSON.parse(body);
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 2048,
-        messages: [
-          {
-            role: "user",
-            content: body.content
-          }
-        ]
-      })
-    });
+```
+const { messages, model, max_tokens, system } = body;
 
-    const data = await response.json();
+const payload = {
+  model:      model      || "claude-opus-4-5",
+  max_tokens: max_tokens || 4000,
+  messages:   messages   || [],
+};
+if (system) payload.system = system;
 
-    if (!response.ok) {
-      return res.status(response.status).json(data);
-    }
+const response = await fetch("https://api.anthropic.com/v1/messages", {
+  method: "POST",
+  headers: {
+    "Content-Type":      "application/json",
+    "x-api-key":         apiKey,
+    "anthropic-version": "2023-06-01",
+    "anthropic-beta":    "pdfs-2024-09-25",
+  },
+  body: JSON.stringify(payload),
+});
 
-    return res.status(200).json(data);
+const data = await response.json();
 
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+if (!response.ok) {
+  return res.status(response.status).json(data);
+}
+
+return res.status(200).json(data);
+```
+
+} catch (err) {
+console.error(“Proxy error:”, err);
+return res.status(500).json({ error: err.message });
+}
 }
