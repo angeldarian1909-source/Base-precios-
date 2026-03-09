@@ -442,12 +442,7 @@ mark { background: rgba(0,229,255,.25); color: var(--accent); border-radius: 3px
   <div class="card">
     <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:4px">🤖 Escaneo de cotizaciones con IA</h3>
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:20px">Sube una foto o PDF de una cotización y la IA extraerá automáticamente los materiales.</p>
-    <div class="field">
-      <label>API Key de Anthropic</label>
-      <input class="inp" type="password" id="iaApiKey" placeholder="sk-ant-…" />
-      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">Se guarda localmente en este dispositivo y nunca se envía a nuestros servidores.</div>
-    </div>
-    <div class="field" style="margin-top:14px">
+    <div class="field" style="margin-top:0px">
       <label>Archivo (imagen JPG/PNG o PDF)</label>
       <input class="inp" type="file" id="iaFile" accept="image/*,application/pdf" />
     </div>
@@ -1050,14 +1045,9 @@ document.addEventListener('click', e => {
    IA SCANNER
 ═══════════════════════════════════════════════════════════ */
 window.scanIA = async function() {
-  const apiKey = document.getElementById('iaApiKey').value.trim();
-  const file   = document.getElementById('iaFile').files[0];
-  if (!apiKey) return showIAError('Ingresa tu API Key de Anthropic.');
-  if (!file)   return showIAError('Selecciona un archivo.');
+  const file = document.getElementById('iaFile').files[0];
+  if (!file) return showIAError('Selecciona un archivo.');
   if (file.size > 5*1024*1024) return showIAError('Archivo mayor a 5MB.');
-
-  // Guardar API key localmente
-  try { localStorage.setItem('bpu_apikey', apiKey); } catch(_){}
 
   document.getElementById('iaLoading').style.display = 'flex';
   document.getElementById('iaError').style.display   = 'none';
@@ -1085,7 +1075,7 @@ Si no encuentras algún campo, usa cadena vacía o 0 para subtotal.` }
 
     const res = await fetch('/api/chat', {
       method:'POST',
-      headers:{ 'Content-Type':'application/json', 'x-api-key': apiKey },
+      headers:{ 'Content-Type':'application/json' },
       body: JSON.stringify({ messages: msgs, model:'claude-opus-4-5', max_tokens:4000 })
     });
 
