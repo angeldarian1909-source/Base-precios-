@@ -698,6 +698,8 @@ window.confirmLogout = function() {
 };
 
 async function doLogout() {
+  if (unsubscribeFn) { unsubscribeFn(); unsubscribeFn = null; }
+  materiales = [];
   await signOut(auth);
   closeModal('confirmModal');
 }
@@ -718,15 +720,24 @@ function showLoginPage() {
 /* ═══════════════════════════════════════════════════════════
    FIRESTORE LISTENER
 ═══════════════════════════════════════════════════════════ */
+let unsubscribeFn = null;
 function subscribeData() {
-  onSnapshot(collection(db,"materiales"), snap => {
-    materiales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-    // cache local
-    try { localStorage.setItem('bpu_cache', JSON.stringify(materiales)); } catch(_){}
-    renderCatalog();
-    renderStats();
-    checkAlerts();
-  });
+  if (unsubscribeFn) { unsubscribeFn(); unsubscribeFn = null; }
+  unsubscribeFn = onSnapshot(
+    collection(db,"materiales"),
+    snap => {
+      materiales = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      try { localStorage.setItem('bpu_cache', JSON.stringify(materiales)); } catch(_){}
+      renderCatalog();
+      renderStats();
+      checkAlerts();
+    },
+    err => {
+      console.error('Firestore error:', err);
+      // Reintentar después de 2 segundos
+      setTimeout(() => { if (currentUser) subscribeData(); }, 2000);
+    }
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════
