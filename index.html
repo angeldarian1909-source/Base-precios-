@@ -1088,10 +1088,20 @@ Si no encuentras algún campo, usa cadena vacía o 0 para subtotal.` }
     const text = data.content?.[0]?.text || '';
     let parsed;
     try {
-      const clean = text.replace(/```json|```/g,'').trim();
+      // Intentar extraer JSON del texto de múltiples formas
+      let clean = text.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+      // Buscar el primer [ o { en el texto
+      const arrStart = clean.indexOf('[');
+      const objStart = clean.indexOf('{');
+      if (arrStart !== -1 && (objStart === -1 || arrStart < objStart)) {
+        clean = clean.slice(arrStart, clean.lastIndexOf(']') + 1);
+      } else if (objStart !== -1) {
+        clean = '[' + clean.slice(objStart, clean.lastIndexOf('}') + 1) + ']';
+      }
       parsed = JSON.parse(clean);
+      if (!Array.isArray(parsed)) parsed = [parsed];
     } catch(_) {
-      throw new Error('No se pudo parsear la respuesta de la IA. Respuesta: ' + text.slice(0,200));
+      throw new Error('No se pudo parsear la respuesta de la IA. Respuesta: ' + text.slice(0,300));
     }
 
     renderIAPreview(parsed);
