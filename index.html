@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0f1923" />
+  <meta name="theme-color" content="#0a0a0a" />
   <title>Base de Precios Unitarios</title>
   <link rel="manifest" href="/manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,19 +13,19 @@
     /* ── RESET & VARS ──────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:       #0d1520;
-      --bg2:      #131f2e;
-      --bg3:      #1a2840;
-      --border:   #243450;
-      --accent:   #00e5ff;
-      --accent2:  #ff6b35;
-      --text:     #e2eaf5;
-      --muted:    #6b82a0;
-      --green:    #22c55e;
-      --yellow:   #eab308;
-      --orange:   #f97316;
+      --bg:       #0a0a0a;
+      --bg2:      #111111;
+      --bg3:      #1a1a1a;
+      --border:   #2a2a2a;
+      --accent:   #d0d0d0;
+      --accent2:  #888888;
+      --text:     #f0f0f0;
+      --muted:    #606060;
+      --green:    #6fcf97;
+      --yellow:   #f2c94c;
+      --orange:   #f2994a;
       --red:      #ef4444;
-      --radius:   10px;
+      --radius:   6px;
       --shadow:   0 4px 24px rgba(0,0,0,.45);
       --font:     'Syne', sans-serif;
       --mono:     'DM Mono', monospace;
@@ -237,11 +237,11 @@ tr:hover td { background: rgba(0,229,255,.03); }
 
 /* ── STATS ───────────────────────────────────────────────────── */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
-.stat-card {
+.stat-card { border: 1px solid var(--border); background: var(--bg2);
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 16px; text-align: center;
 }
-.stat-card .num { font-size: 2rem; font-weight: 800; color: var(--accent); font-family: var(--mono); }
+.stat-card .num { font-size: 2.4rem; font-weight: 800; color: var(--text); font-family: var(--mono); letter-spacing: -1px; }
 .stat-card .lbl { font-size: .75rem; color: var(--muted); margin-top: 4px; }
 
 /* ── RESPONSIVE ──────────────────────────────────────────────── */
@@ -954,13 +954,14 @@ window.saveMaterial = async function() {
     if (id) {
       await updateDoc(doc(db,'materiales',id), data);
       toast('Material actualizado ✓');
+      showPage('catalogo');
     } else {
       data.createdAt = serverTimestamp();
       await addDoc(collection(db,'materiales'), data);
       toast('Material guardado ✓');
+      showPage('catalogo');
     }
     clearForm();
-    showPage('catalogo');
   } catch(e) {
     document.getElementById('formMsg').innerHTML = `<span style="color:var(--red)">${e.message}</span>`;
   }
@@ -990,8 +991,8 @@ window.editMaterial = function(id) {
 window.deleteMaterial = function(id) {
   const m = materiales.find(x => x.id === id);
   showConfirm('¿Eliminar material?', `Se eliminará permanentemente: ${m?.nombre}`, async () => {
-    await deleteDoc(doc(db,'materiales',id));
     closeModal('confirmModal');
+    await deleteDoc(doc(db,'materiales',id));
     toast('Material eliminado.');
   });
 };
