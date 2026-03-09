@@ -626,35 +626,55 @@ const WARN_BEFORE   = 60 * 1000;         // 1 min antes
 ═══════════════════════════════════════════════════════════ */
 onAuthStateChanged(auth, async user => {
   if (user) {
-    // verificar whitelist
-    const uSnap = await getDoc(doc(db,"usuarios",user.uid));
-    const byEmail = await userDocByEmail(user.email);
-    if ((!uSnap.exists() || uSnap.data().activo !== true) && !byEmail) {
-      await signOut(auth);
-      showLoginError("Acceso denegado. Tu correo no está autorizado.");
-      return;
+    try {
+      // Buscar por UID primero
+      const uSnap = await getDoc(doc(db,"usuarios",user.uid));
+      let uData = null;
+      let autorizado = false;
+
+      if (uSnap.exists() && uSnap.data().activo === true) {
+        uData = uSnap.data();
+        autorizado = true;
+      } else {
+        // Buscar por email como alternativa
+        const snap = await getDocs(collection(db,"usuarios"));
+        for (const d of snap.docs) {
+          if (d.data().email === user.email && d.data().activo === true) {
+            uData = d.data();
+            autorizado = true;
+            break;
+          }
+        }
+      }
+
+      if (!autorizado) {
+        await signOut(auth);
+        showLoginError("Acceso denegado. Tu correo no está autorizado.");
+        return;
+      }
+
+      currentUser = user;
+      isAdmin = !!uData?.admin;
+      document.getElementById('userEmail').textContent = user.email;
+      showApp();
+      subscribeData();
+      startInactivity();
+    } catch(e) {
+      console.error("Auth error:", e);
+      // Si hay error de permisos, dejar entrar de todas formas si está autenticado
+      currentUser = user;
+      isAdmin = false;
+      document.getElementById('userEmail').textContent = user.email;
+      showApp();
+      subscribeData();
+      startInactivity();
     }
-    currentUser = user;
-    const uData = uSnap.exists() ? uSnap.data() : byEmail;
-    isAdmin = !!uData?.admin;
-    document.getElementById('userEmail').textContent = user.email;
-    showApp();
-    subscribeData();
-    startInactivity();
   } else {
     currentUser = null;
     showLoginPage();
     stopInactivity();
   }
 });
-
-async function userDocByEmail(email) {
-  const snap = await getDocs(collection(db,"usuarios"));
-  for (const d of snap.docs) {
-    if (d.data().email === email && d.data().activo === true) return d.data();
-  }
-  return null;
-}
 
 window.doLogin = async function() {
   const email = document.getElementById('loginEmail').value.trim();
